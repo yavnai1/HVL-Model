@@ -12,355 +12,361 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Assistant','Heebo',sans-serif;direction:rtl}
-input[type=range]{cursor:pointer}
+input[type=range]{cursor:pointer;height:18px}
 select{cursor:pointer}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useEffect,useMemo,useRef,useCallback}=React;
+const {useState,useEffect,useMemo,useRef}=React;
+const h=React.createElement;
 
-// ═══════════════════ DATA ═══════════════════
-const DEFAULT_CSV_DATA={
+// ═══ DATA ═══
+const DD={
   eventTypes:["PRM","OFS","CKT","BRC","RNT"],
-  eventLabels:{PRM:"PRM - פרימיום",OFS:"OFS - אופסייט",CKT:"CKT - קוקטלים",BRC:"BRC - בראנץ'",RNT:"RNT - השכרת חלל"},
-  inputs:{
-    ADT:{label:"כמות מבוגרים",PRM:"15-80",OFS:"10-70",CKT:"15-80",BRC:"15-80",RNT:"15-80"},
-    CHD:{label:"כמות ילדים",PRM:"0-20",OFS:"לא רלוונטי",CKT:"0-20",BRC:"0-20",RNT:"0-20"},
-    FOD:{label:"האם נדרש אוכל?",PRM:"כלול",OFS:"לא / כן",CKT:"כלול",BRC:"כלול",RNT:"לא רלוונטי"},
-    KSH:{label:"האם נדרש הכשרת רב",PRM:"לא / כן",OFS:"לא / כן",CKT:"לא / כן",BRC:"לא / כן",RNT:"לא רלוונטי"},
-    WTR:{label:"האם נדרש מלצר?",PRM:"ROUNDUP (ADT+CHD) / 20",OFS:"0 / 1 / 2",CKT:"ROUNDUP (ADT+CHD) / 20",BRC:"ROUNDUP (ADT+CHD) / 20",RNT:"0 / 1 / 2"},
-    PRO:{label:"תוספת מנות חלבון (לאדם)",PRM:"0 / 1 / 2",OFS:"0 / 1 / 2",CKT:"0 / 1 / 2",BRC:"0 / 1 / 2",RNT:"0 / 1 / 2"},
-    CRK:{label:"דמי חליצה",PRM:"לא / כן",OFS:"לא / כן",CKT:"לא / כן",BRC:"לא / כן",RNT:"לא רלוונטי"},
-    CER:{label:"סדנת קרמיקה",PRM:"לא / כן",OFS:"לא / כן",CKT:"לא / כן",BRC:"לא / כן",RNT:"לא רלוונטי"},
-    FLW:{label:"האם נדרש פרחים",PRM:"כלול",OFS:"לא / כן",CKT:"כלול",BRC:"כלול",RNT:"לא / כן"},
-    WIN:{label:"האם נדרש יין",PRM:"כלול",OFS:"לא / כן",CKT:"כלול",BRC:"כלול",RNT:"לא / כן"},
-    WINP:{label:"האם נדרש תוספת יין פרימיום",PRM:"לא / כן",OFS:"לא רלוונטי",CKT:"לא / כן",BRC:"לא / כן",RNT:"לא רלוונטי"},
-    KIT:{label:"האם נדרש שימוש במטבח",PRM:"לא רלוונטי",OFS:"לא / כן",CKT:"לא רלוונטי",BRC:"לא רלוונטי",RNT:"לא / כן"},
-    DSC:{label:"אחוזי הנחה",PRM:"0-15",OFS:"0-15",CKT:"0-15",BRC:"0-15",RNT:"0-15"},
-    TIP:{label:"אחוזים לטיפ",PRM:"15-0",OFS:"15-0",CKT:"15-0",BRC:"15-0",RNT:"15-0"},
+  eL:{PRM:"PRM - פרימיום",OFS:"OFS - אופסייט",CKT:"CKT - קוקטלים",BRC:"BRC - בראנץ'",RNT:"RNT - השכרת חלל"},
+  inp:{
+    ADT:{PRM:"15-80",OFS:"10-70",CKT:"15-80",BRC:"15-80",RNT:"15-80"},
+    CHD:{PRM:"0-20",OFS:"NR",CKT:"0-20",BRC:"0-20",RNT:"0-20"},
+    FOD:{PRM:"IC",OFS:"YN",CKT:"IC",BRC:"IC",RNT:"NR"},
+    KSH:{PRM:"YN",OFS:"YN",CKT:"YN",BRC:"YN",RNT:"NR"},
+    WTR:{PRM:"CMP",OFS:"012",CKT:"CMP",BRC:"CMP",RNT:"012"},
+    PRO:{PRM:"012",OFS:"012",CKT:"012",BRC:"012",RNT:"012"},
+    CRK:{PRM:"YN",OFS:"YN",CKT:"YN",BRC:"YN",RNT:"NR"},
+    CER:{PRM:"YN",OFS:"YN",CKT:"YN",BRC:"YN",RNT:"NR"},
+    FLW:{PRM:"IC",OFS:"YN",CKT:"IC",BRC:"IC",RNT:"YN"},
+    WIN:{PRM:"IC",OFS:"YN",CKT:"IC",BRC:"IC",RNT:"YN"},
+    WINP:{PRM:"YN",OFS:"NR",CKT:"YN",BRC:"YN",RNT:"NR"},
+    KIT:{PRM:"NR",OFS:"YN",CKT:"NR",BRC:"NR",RNT:"YN"},
   },
-  pricing:{
-    IBASE:{label:"חבילת בסיס (עד 15 אנשים)",PRM:9900,OFS:5500,CKT:7050,BRC:8250,RNT:5500},
-    IMORE:{label:"תוספת מעבר ל-15 אנשים (לאדם)",PRM:550,OFS:500,CKT:470,BRC:500,RNT:"formula"},
-    ICRK:{label:"דמי חליצה",PRM:1000,OFS:1000,CKT:1000,BRC:1000,RNT:null},
-    IPRO:{label:"תוספת מנת חלבון (לאדם)",PRM:75,OFS:75,CKT:75,BRC:75,RNT:null},
-    ICER:{label:"סדנת קרמיקה (לאדם)",PRM:350,OFS:350,CKT:350,BRC:350,RNT:null},
-    IWINP:{label:"תוספת יין פרימיום (לאדם)",PRM:60,OFS:60,CKT:60,BRC:60,RNT:null},
-    IKIT:{label:"שימוש במטבח",PRM:null,OFS:150,CKT:null,BRC:null,RNT:1000},
-    IFLW:{label:"סידור פרחים",PRM:"כלול",OFS:1200,CKT:"כלול",BRC:1200,RNT:1200},
-    IWIN:{label:"יין (לאדם)",PRM:"כלול",OFS:70,CKT:70,BRC:70,RNT:70},
-    IKSH:{label:"הכשרת רב",PRM:1500,OFS:1500,CKT:1500,BRC:1500,RNT:1500},
-    OPRO1:{label:"עלות מנת חלבון חומר גלם",PRM:"formula",OFS:"formula",CKT:"formula",BRC:"formula",RNT:null},
-    OPRO2:{label:"עלות מנת חלבון (שף)",PRM:20,OFS:20,CKT:20,BRC:20,RNT:null},
-    OCER:{label:"עלות סדנת קרמיקה (לאדם)",PRM:175,OFS:175,CKT:175,BRC:175,RNT:null},
-    OWINP:{label:"עלות תוספת יין פרימיום",PRM:10,OFS:10,CKT:10,BRC:10,RNT:null},
-    OKIT:{label:"עלות שימוש במטבח",PRM:null,OFS:0,CKT:null,BRC:null,RNT:0},
-    OFLW:{label:"עלות פרחים",PRM:800,OFS:800,CKT:800,BRC:800,RNT:800},
-    OWIN:{label:"עלות יין",PRM:20,OFS:20,CKT:20,BRC:20,RNT:20},
-    OKSH:{label:"עלות הכשרת רב",PRM:1000,OFS:1000,CKT:1000,BRC:1000,RNT:1000},
-    OCHEFB:{label:"שף בסיס",PRM:2100,OFS:1200,CKT:1400,BRC:1400,RNT:null},
-    OCHEF1:{label:"שף תוספת (מאדם 36)",PRM:40,OFS:null,CKT:40,BRC:40,RNT:null},
-    OCHEF2:{label:"שף תוספת (מאדם 11)",PRM:null,OFS:30,CKT:null,BRC:null,RNT:null},
-    OCOOK:{label:"עלות טבח נוסף",PRM:"cook20",OFS:"cook28",CKT:"cook28",BRC:"cook28",RNT:null},
-    OFOOD:{label:"עלות פודקוסט (לאדם)",PRM:70,OFS:70,CKT:55,BRC:70,RNT:null},
-    OCLEAN:{label:"נקיון",PRM:500,OFS:500,CKT:500,BRC:500,RNT:500},
-    OEVM:{label:"מנהל אירוע",PRM:700,OFS:700,CKT:700,BRC:700,RNT:700},
-    OWTR:{label:"מלצר (ליחידה)",PRM:400,OFS:400,CKT:400,BRC:400,RNT:400},
-    OOVH:{label:"תקורה קבועה",PRM:750,OFS:750,CKT:750,BRC:750,RNT:null},
-    OSLB:{label:"בונוס מנהל מכירות (3%)",percent:0.03},
+  pr:{
+    IBASE:{PRM:9900,OFS:5500,CKT:7050,BRC:8250,RNT:5500},
+    IMORE:{PRM:550,OFS:500,CKT:470,BRC:500,RNT:"f"},
+    ICRK:{PRM:1000,OFS:1000,CKT:1000,BRC:1000,RNT:0},
+    IPRO:{PRM:75,OFS:75,CKT:75,BRC:75,RNT:0},
+    ICER:{PRM:350,OFS:350,CKT:350,BRC:350,RNT:0},
+    IWINP:{PRM:60,OFS:60,CKT:60,BRC:60,RNT:0},
+    IKIT:{PRM:0,OFS:150,CKT:0,BRC:0,RNT:1000},
+    IFLW:{PRM:0,OFS:1200,CKT:0,BRC:1200,RNT:1200},
+    IWIN:{PRM:0,OFS:70,CKT:70,BRC:70,RNT:70},
+    IKSH:{PRM:1500,OFS:1500,CKT:1500,BRC:1500,RNT:1500},
+    OCHEFB:{PRM:2100,OFS:1200,CKT:1400,BRC:1400,RNT:0},
+    OCHEF1:{PRM:40,OFS:0,CKT:40,BRC:40,RNT:0},
+    OCHEF2:{PRM:0,OFS:30,CKT:0,BRC:0,RNT:0},
+    OCOOK:{PRM:20,OFS:28,CKT:28,BRC:28,RNT:0},
+    OFOOD:{PRM:70,OFS:70,CKT:55,BRC:70,RNT:0},
+    OPRO2:{PRM:20,OFS:20,CKT:20,BRC:20,RNT:0},
+    OCER:{PRM:175,OFS:175,CKT:175,BRC:175,RNT:0},
+    OWINP:{PRM:10,OFS:10,CKT:10,BRC:10,RNT:0},
+    OFLW:{PRM:800,OFS:800,CKT:800,BRC:800,RNT:800},
+    OWIN:{PRM:20,OFS:20,CKT:20,BRC:20,RNT:20},
+    OKSH:{PRM:1000,OFS:1000,CKT:1000,BRC:1000,RNT:1000},
+    OCLEAN:{PRM:500,OFS:500,CKT:500,BRC:500,RNT:500},
+    OEVM:{PRM:700,OFS:700,CKT:700,BRC:700,RNT:700},
+    OWTR:{PRM:400,OFS:400,CKT:400,BRC:400,RNT:400},
+    OOVH:{PRM:750,OFS:750,CKT:750,BRC:750,RNT:0},
   }
 };
-const VAT_RATE=0.18;
-const C={cream:"#FBEDDF",tan:"#F3CFBD",terracotta:"#DC8C64",brick:"#B74F3E",rust:"#C64532",sand:"#D7C6C0",sage:"#989777",blue:"#1043BF",darkBrick:"#8B3020",lightCream:"#FFF8F2",white:"#FFFFFF"};
+const K={cream:"#FBEDDF",tan:"#F3CFBD",tc:"#DC8C64",brick:"#B74F3E",rust:"#C64532",sand:"#D7C6C0",sage:"#989777",blue:"#1043BF",dk:"#8B3020",lc:"#FFF8F2",wh:"#FFFFFF"};
 
-// ═══════════════════ CSV PARSER ═══════════════════
-function parseCSV(text){const lines=text.split(/\r?\n/).map(l=>{const r=[];let cur='',inQ=false;for(let i=0;i<l.length;i++){if(l[i]==='"')inQ=!inQ;else if(l[i]===','&&!inQ){r.push(cur.trim());cur=''}else cur+=l[i]}r.push(cur.trim());return r});return lines}
-function loadCSVData(text){const lines=parseCSV(text);const data=JSON.parse(JSON.stringify(DEFAULT_CSV_DATA));const colMap={3:"PRM",4:"OFS",5:"CKT",6:"BRC",7:"RNT"};for(let i=2;i<lines.length;i++){const row=lines[i];if(!row||row.length<3)continue;const code=row[0];if(data.inputs[code])for(const[col,et]of Object.entries(colMap))if(row[col]!==undefined&&row[col]!=='')data.inputs[code][et]=row[col];if(data.pricing[code])for(const[col,et]of Object.entries(colMap))if(row[col]!==undefined&&row[col]!==''){const val=row[col];if(val==="לא רלוונטי")data.pricing[code][et]=null;else if(val==="כלול")data.pricing[code][et]="כלול";else if(!isNaN(Number(val)))data.pricing[code][et]=Number(val);else data.pricing[code][et]=val}if(!code&&row[2]){const item=row[2];if(item.includes("טבח נוסף"))for(const[col,et]of Object.entries(colMap)){if(row[col]&&row[col]!=="לא רלוונטי"){if(row[col].includes("20"))data.pricing.OCOOK[et]="cook20";else if(row[col].includes("28"))data.pricing.OCOOK[et]="cook28"}else if(row[col]==="לא רלוונטי")data.pricing.OCOOK[et]=null}if(item.includes("פודקוסט"))for(const[col,et]of Object.entries(colMap)){if(row[col]&&row[col]!=="לא רלוונטי"&&!isNaN(Number(row[col])))data.pricing.OFOOD[et]=Number(row[col]);else if(row[col]==="לא רלוונטי")data.pricing.OFOOD[et]=null}if(item.includes("נקיון"))for(const[col,et]of Object.entries(colMap))if(row[col]&&!isNaN(Number(row[col])))data.pricing.OCLEAN[et]=Number(row[col])}}return data}
+// ═══ COMPACT UI COMPONENTS ═══
+function Chk({label,checked,onChange}){
+  return h('label',{style:{display:"flex",alignItems:"center",gap:5,cursor:"pointer",fontSize:13,whiteSpace:"nowrap"}},
+    h('div',{style:{width:17,height:17,borderRadius:3,border:"2px solid "+K.brick,backgroundColor:K.wh,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+      checked&&h('svg',{width:11,height:11,viewBox:"0 0 14 14",fill:"none"},h('path',{d:"M2 7L5.5 10.5L12 3.5",stroke:K.brick,strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"}))),
+    h('input',{type:"checkbox",checked:checked,onChange:onChange,style:{display:"none"}}),
+    h('span',{style:{color:K.dk}},label))}
 
-// ═══════════════════ SUB-COMPONENTS ═══════════════════
-function CheckboxField({label,checked,onChange,disabled}){return React.createElement('label',{style:{display:"flex",alignItems:"center",gap:10,cursor:disabled?"default":"pointer",direction:"rtl",fontFamily:"'Assistant',sans-serif",fontSize:14}},React.createElement('div',{style:{width:22,height:22,borderRadius:4,border:`2px solid ${C.brick}`,backgroundColor:C.white,display:"flex",alignItems:"center",justifyContent:"center",opacity:disabled?.6:1}},checked&&React.createElement('svg',{width:14,height:14,viewBox:"0 0 14 14",fill:"none"},React.createElement('path',{d:"M2 7L5.5 10.5L12 3.5",stroke:C.brick,strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"}))),React.createElement('input',{type:"checkbox",checked,onChange,disabled,style:{display:"none"}}),React.createElement('span',{style:{color:C.darkBrick}},label))}
+function NumSld({label,min,max,value,onChange}){
+  return h('div',{style:{flex:1,minWidth:100}},
+    h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:1}},
+      h('span',{style:{fontSize:12,color:K.dk,fontWeight:600}},label),
+      h('span',{style:{fontSize:13,fontWeight:700,color:K.brick,backgroundColor:K.wh,padding:"0 8px",borderRadius:4,border:"1px solid "+K.tan}},value)),
+    h('input',{type:"range",min:min,max:max,value:value,onChange:function(ev){onChange(Number(ev.target.value))},style:{width:"100%",accentColor:K.brick}}))}
 
-function SliderField({label,min,max,value,onChange}){const aMin=Math.min(min,max),aMax=Math.max(min,max),rev=min>max;return React.createElement('div',{style:{direction:"rtl",fontFamily:"'Assistant',sans-serif",marginBottom:4}},React.createElement('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},React.createElement('span',{style:{fontSize:14,color:C.darkBrick,fontWeight:600}},label),React.createElement('span',{style:{fontSize:16,fontWeight:700,color:C.brick,backgroundColor:C.white,padding:"2px 12px",borderRadius:6,minWidth:40,textAlign:"center",border:`1px solid ${C.tan}`}},value+'%')),React.createElement('input',{type:"range",min:aMin,max:aMax,value,onChange:e=>onChange(Number(e.target.value)),style:{width:"100%",accentColor:C.brick,direction:rev?"rtl":"ltr"}}),React.createElement('div',{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:C.sage}},React.createElement('span',null,aMin+'%'),React.createElement('span',null,aMax+'%')))}
+function PctSld({label,min,max,value,onChange}){
+  var aMin=Math.min(min,max),aMax=Math.max(min,max);
+  return h('div',{style:{flex:1,minWidth:100}},
+    h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:1}},
+      h('span',{style:{fontSize:12,color:K.dk,fontWeight:600}},label),
+      h('span',{style:{fontSize:13,fontWeight:700,color:K.brick,backgroundColor:K.wh,padding:"0 8px",borderRadius:4,border:"1px solid "+K.tan}},value+"%")),
+    h('input',{type:"range",min:aMin,max:aMax,value:value,onChange:function(ev){onChange(Number(ev.target.value))},style:{width:"100%",accentColor:K.brick,direction:min>max?"rtl":"ltr"}}))}
 
-function NumberSlider({label,min,max,value,onChange,note}){return React.createElement('div',{style:{direction:"rtl",fontFamily:"'Assistant',sans-serif",marginBottom:4}},React.createElement('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}},React.createElement('span',{style:{fontSize:14,color:C.darkBrick,fontWeight:600}},label),React.createElement('span',{style:{fontSize:16,fontWeight:700,color:C.brick,backgroundColor:C.white,padding:"2px 12px",borderRadius:6,minWidth:40,textAlign:"center",border:`1px solid ${C.tan}`}},value)),React.createElement('input',{type:"range",min,max,value,onChange:e=>onChange(Number(e.target.value)),style:{width:"100%",accentColor:C.brick}}),React.createElement('div',{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:C.sage}},React.createElement('span',null,min),React.createElement('span',null,max)),note&&React.createElement('div',{style:{fontSize:11,color:C.sage,marginTop:-2}},note))}
+function Sel3({label,value,onChange}){
+  return h('div',{style:{minWidth:80}},
+    h('label',{style:{fontSize:12,color:K.dk,fontWeight:600,display:"block",marginBottom:1}},label),
+    h('select',{value:String(value),onChange:function(ev){onChange(Number(ev.target.value))},style:{width:"100%",padding:"3px 6px",borderRadius:4,border:"1px solid "+K.tan,backgroundColor:K.wh,fontSize:13,color:K.dk,fontFamily:"'Assistant',sans-serif"}},
+      h('option',{value:"0"},"0"),h('option',{value:"1"},"1"),h('option',{value:"2"},"2")))}
 
-function SelectField({label,options,value,onChange,disabled}){return React.createElement('div',{style:{direction:"rtl",fontFamily:"'Assistant',sans-serif",marginBottom:4}},React.createElement('label',{style:{fontSize:14,color:C.darkBrick,fontWeight:600,display:"block",marginBottom:4}},label),disabled?React.createElement('div',{style:{padding:"6px 12px",borderRadius:6,backgroundColor:C.white,border:`1px solid ${C.tan}`,fontSize:14,color:C.darkBrick}},options[0]?.label||value):React.createElement('select',{value,onChange:e=>onChange(e.target.value),style:{width:"100%",padding:"6px 12px",borderRadius:6,border:`1px solid ${C.tan}`,backgroundColor:C.white,fontSize:14,color:C.darkBrick,fontFamily:"'Assistant',sans-serif",cursor:"pointer"}},options.map(o=>React.createElement('option',{key:o.value,value:o.value},o.label))))}
+function Inc({label}){return h('span',{style:{fontSize:12,color:K.sage,fontWeight:600,padding:"1px 6px",borderRadius:4,border:"1px solid "+K.tan,backgroundColor:K.wh,whiteSpace:"nowrap"}},label+" ✓")}
 
-function IncludedField({label}){return React.createElement('div',{style:{direction:"rtl",fontFamily:"'Assistant',sans-serif",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}},React.createElement('span',{style:{fontSize:14,color:C.darkBrick,fontWeight:600}},label),React.createElement('span',{style:{fontSize:13,color:C.sage,fontWeight:600,backgroundColor:C.white,padding:"2px 12px",borderRadius:6,border:`1px solid ${C.tan}`}},"כלול ✓"))}
+function fN(n){var r=Math.round(n),a=Math.abs(r).toLocaleString("he-IL");return r<0?"- "+a+" ₪":a+" ₪"}
 
-function ComputedField({label,value}){return React.createElement('div',{style:{direction:"rtl",fontFamily:"'Assistant',sans-serif",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}},React.createElement('span',{style:{fontSize:14,color:C.darkBrick,fontWeight:600}},label),React.createElement('span',{style:{fontSize:15,fontWeight:700,color:C.brick,backgroundColor:C.white,padding:"2px 12px",borderRadius:6,minWidth:30,textAlign:"center",border:`1px solid ${C.tan}`}},value))}
+function PL({label,amount,isExp,detail}){
+  var r=Math.round(amount),c=r<0?"#D32F2F":r>0?(isExp?"#D32F2F":"#2E7D32"):K.dk;
+  return h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 0",borderBottom:"1px solid "+K.cream,fontSize:12}},
+    h('div',null,h('span',{style:{color:K.dk}},label),detail&&h('span',{style:{fontSize:10,color:K.sage,marginRight:4}},detail)),
+    h('span',{style:{fontWeight:600,color:c,direction:"ltr",whiteSpace:"nowrap"}},fN(r)))}
 
-function formatNIS(num){const r=Math.round(num),neg=r<0,abs=Math.abs(r).toLocaleString("he-IL");return neg?`- ${abs} ₪`:`${abs} ₪`}
+function SL({label,amount,isTotal,isExp}){
+  var r=Math.round(amount),c=r<0?"#D32F2F":isExp?"#D32F2F":"#2E7D32";
+  return h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:isTotal?"5px 0":"3px 0",borderTop:isTotal?"2px solid "+K.brick:"none",fontSize:isTotal?14:12}},
+    h('span',{style:{fontWeight:isTotal?800:600,color:K.dk}},label),
+    h('span',{style:{fontWeight:isTotal?800:600,color:c,direction:"ltr",whiteSpace:"nowrap"}},fN(r)))}
 
-function PricingLine({label,amount,isExpense,detail,bold}){const r=Math.round(amount);const color=r<0?"#D32F2F":r>0?(isExpense?"#D32F2F":"#2E7D32"):C.darkBrick;return React.createElement('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:`1px solid ${C.cream}`,direction:"rtl",fontFamily:"'Assistant',sans-serif"}},React.createElement('div',null,React.createElement('span',{style:{fontSize:bold?15:13,fontWeight:bold?700:400,color:C.darkBrick}},label),detail&&React.createElement('span',{style:{fontSize:11,color:C.sage,marginRight:6}},detail)),React.createElement('span',{style:{fontSize:bold?16:14,fontWeight:bold?700:500,color,direction:"ltr",whiteSpace:"nowrap"}},formatNIS(r)))}
-
-function SummaryLine({label,amount,isTotal,isExpense}){const r=Math.round(amount);const color=r<0?"#D32F2F":isExpense?"#D32F2F":"#2E7D32";return React.createElement('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:isTotal?"10px 0":"6px 0",borderBottom:isTotal?"none":`1px solid ${C.cream}`,borderTop:isTotal?`2px solid ${C.brick}`:"none",direction:"rtl",fontFamily:"'Assistant',sans-serif"}},React.createElement('span',{style:{fontSize:isTotal?17:14,fontWeight:isTotal?800:600,color:C.darkBrick}},label),React.createElement('span',{style:{fontSize:isTotal?18:15,fontWeight:isTotal?800:600,color,direction:"ltr",whiteSpace:"nowrap"}},formatNIS(r)))}
-
-// ═══════════════════ MAIN APP ═══════════════════
+// ═══ MAIN APP ═══
 function App(){
-  const[csvData,setCsvData]=useState(()=>{try{const s=localStorage.getItem("hlb_csv_data");return s?JSON.parse(s):DEFAULT_CSV_DATA}catch(e){return DEFAULT_CSV_DATA}});
-  const[eventType,setEventType]=useState("PRM");
-  const[adults,setAdults]=useState(15);
-  const[children,setChildren]=useState(0);
-  const[food,setFood]=useState(false);
-  const[kosher,setKosher]=useState(false);
-  const[protein,setProtein]=useState(0);
-  const[cork,setCork]=useState(false);
-  const[ceramics,setCeramics]=useState(false);
-  const[flowers,setFlowers]=useState(false);
-  const[wine,setWine]=useState(false);
-  const[winePremium,setWinePremium]=useState(false);
-  const[kitchen,setKitchen]=useState(false);
-  const[discount,setDiscount]=useState(0);
-  const[tip,setTip]=useState(15);
-  const[copyMsg,setCopyMsg]=useState("");
-  const[pdfTemplate,setPdfTemplate]=useState(null);
-  const[pdfGenerating,setPdfGenerating]=useState(false);
-  const[manualWaiters,setManualWaiters]=useState(0);
-  const fileInputRef=useRef(null);
-  const pdfInputRef=useRef(null);
+  var D=DD,P=D.pr,I=D.inp;
+  var s=useState,r=useRef;
+  var [et,setET]=s("PRM");
+  var [adt,setAdt]=s(15),[chd,setChd]=s(0);
+  var [food,setFood]=s(false),[ksh,setKsh]=s(false);
+  var [pro,setPro]=s(0),[crk,setCrk]=s(false),[cer,setCer]=s(false);
+  var [flw,setFlw]=s(false),[win,setWin]=s(false);
+  var [winp,setWinp]=s(false),[kit,setKit]=s(false);
+  var [dsc,setDsc]=s(0),[tip,setTip]=s(15);
+  var [mw,setMw]=s(0);
+  var [msg,setMsg]=s("");
+  var [pdf,setPdf]=s(null);
+  var [pdfBusy,setPdfBusy]=s(false);
+  var pdfRef=r(null);
 
-  // Load PDF template from localStorage on mount
-  useEffect(()=>{try{const b64=localStorage.getItem("hlb_pdf_template");if(b64){const bin=atob(b64);const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);setPdfTemplate(bytes.buffer)}}catch(e){}},[]);
+  // Load saved PDF template
+  useEffect(function(){try{var b=localStorage.getItem("hlb_pdf");if(b){var bin=atob(b);var u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);setPdf(u.buffer)}}catch(e){}},[]);
 
-  const et=eventType,inp=csvData.inputs,pr=csvData.pricing;
+  // Reset on event type change
+  useEffect(function(){var r=pR(I.ADT[et]);setAdt(r?r[0]:15);setChd(0);setFood(false);setKsh(false);setPro(0);setCrk(false);setCer(false);setFlw(false);setWin(false);setWinp(false);setKit(false);setDsc(0);setTip(15);setMw(0)},[et]);
 
-  useEffect(()=>{const r=parseRange(inp.ADT[et]);setAdults(r?r[0]:15);setChildren(0);setFood(false);setKosher(false);setProtein(0);setCork(false);setCeramics(false);setFlowers(false);setWine(false);setWinePremium(false);setKitchen(false);setDiscount(0);setTip(15);setManualWaiters(0)},[eventType]);
+  function pR(v){if(!v||v==="NR"||v==="IC")return null;var m=v.match(/(\d+)\s*-\s*(\d+)/);return m?[+m[1],+m[2]]:null}
+  function nR(c){return I[c]?.[et]==="NR"}
+  function iC(c){return I[c]?.[et]==="IC"}
+  function isCmp(c){return I[c]?.[et]==="CMP"}
 
-  function parseRange(v){if(!v||v==="לא רלוונטי"||v==="כלול")return null;const m=v.match(/(\d+)\s*-\s*(\d+)/);return m?[Number(m[1]),Number(m[2])]:null}
-  function isNotRelevant(code){return inp[code]?.[et]==="לא רלוונטי"}
-  function isIncluded(code){return inp[code]?.[et]==="כלול"}
-  function isComputed(code){return inp[code]?.[et]?.startsWith?.("ROUNDUP")}
+  var tot=adt+chd;
+  var aR=pR(I.ADT[et]),cR=!nR("CHD")?pR(I.CHD[et]):null;
+  var compW=isCmp("WTR")?Math.ceil(tot/20):0;
+  var isRNT=et==="RNT";
 
-  const totalPeople=adults+children;
-  const adultRange=parseRange(inp.ADT[et]);
-  const childRange=!isNotRelevant("CHD")?parseRange(inp.CHD[et]):null;
-  const computedWaiters=isComputed("WTR")?Math.ceil(totalPeople/20):0;
+  // ═══ INCOME LINES ═══
+  var iLines=useMemo(function(){var L=[];
+    L.push({l:"חבילת בסיס (עד 15)",a:P.IBASE[et]||0});
+    if(tot>15&&!isRNT){var x=tot-15,pp=P.IMORE[et];if(typeof pp==="number")L.push({l:"תוספת "+x+" נוספים",a:x*pp,d:"("+x+"×"+pp+")"})}
+    else if(tot>15&&isRNT){var x2=Math.ceil(Math.max(0,tot-15)/10)*1000;if(x2>0)L.push({l:"תוספת מעבר ל-15",a:x2})}
+    if(!nR("CRK")&&crk&&P.ICRK[et])L.push({l:"דמי חליצה",a:P.ICRK[et]});
+    if(!nR("PRO")&&pro>0&&P.IPRO[et])L.push({l:"חלבון",a:pro*tot*P.IPRO[et],d:"("+tot+"×"+pro+"×"+P.IPRO[et]+")"});
+    if(!nR("CER")&&cer&&P.ICER[et])L.push({l:"קרמיקה",a:tot*P.ICER[et],d:"("+tot+"×"+P.ICER[et]+")"});
+    if(!nR("WINP")&&winp&&P.IWINP[et])L.push({l:"יין פרימיום",a:adt*P.IWINP[et],d:"("+adt+"×"+P.IWINP[et]+")"});
+    if(!nR("KIT")&&kit&&P.IKIT[et])L.push({l:"מטבח",a:P.IKIT[et]});
+    if(!nR("FLW")&&!iC("FLW")&&flw&&P.IFLW[et])L.push({l:"פרחים",a:P.IFLW[et]});
+    if(!nR("WIN")&&!iC("WIN")&&win&&P.IWIN[et])L.push({l:"יין",a:adt*P.IWIN[et],d:"("+adt+"×"+P.IWIN[et]+")"});
+    if(!nR("KSH")&&ksh&&P.IKSH[et])L.push({l:"הכשרת רב",a:P.IKSH[et]});
+    return L},[et,adt,chd,crk,pro,cer,winp,kit,flw,win,ksh,food,tot]);
 
-  // ═══ INCOME ═══
-  const incomeLines=useMemo(()=>{const L=[];
-    L.push({code:"IBASE",label:"חבילת בסיס (עד 15 אנשים)",amount:pr.IBASE[et]||0});
-    if(totalPeople>15&&et!=="RNT"){const ex=totalPeople-15,pp=pr.IMORE[et];if(typeof pp==="number")L.push({code:"IMORE",label:`תוספת ${ex} אנשים נוספים`,amount:ex*pp,detail:`(${ex} × ${pp} ₪)`})}
-    else if(totalPeople>15&&et==="RNT"){const ex=Math.ceil(Math.max(0,totalPeople-15)/10)*1000;if(ex>0)L.push({code:"IMORE",label:"תוספת מעבר ל-15 אנשים",amount:ex})}
-    if(!isNotRelevant("CRK")&&cork&&pr.ICRK[et])L.push({code:"ICRK",label:"דמי חליצה",amount:pr.ICRK[et]});
-    if(!isNotRelevant("PRO")&&protein>0&&pr.IPRO[et]){const a=protein*totalPeople*pr.IPRO[et];L.push({code:"IPRO",label:"תוספת מנות חלבון",amount:a,detail:`(${totalPeople} × ${protein} × ${pr.IPRO[et]} ₪)`})}
-    if(!isNotRelevant("CER")&&ceramics&&pr.ICER[et]){const a=totalPeople*pr.ICER[et];L.push({code:"ICER",label:"סדנת קרמיקה",amount:a,detail:`(${totalPeople} × ${pr.ICER[et]} ₪)`})}
-    if(!isNotRelevant("WINP")&&winePremium&&pr.IWINP[et]){const a=adults*pr.IWINP[et];L.push({code:"IWINP",label:"תוספת יין פרימיום",amount:a,detail:`(${adults} מבוגרים × ${pr.IWINP[et]} ₪)`})}
-    if(!isNotRelevant("KIT")&&kitchen&&pr.IKIT[et])L.push({code:"IKIT",label:"שימוש במטבח",amount:pr.IKIT[et]});
-    if(!isNotRelevant("FLW")&&!isIncluded("FLW")&&flowers&&pr.IFLW[et]&&pr.IFLW[et]!=="כלול")L.push({code:"IFLW",label:"סידור פרחים",amount:pr.IFLW[et]});
-    if(!isNotRelevant("WIN")&&!isIncluded("WIN")&&wine&&pr.IWIN[et]&&pr.IWIN[et]!=="כלול"){const a=adults*pr.IWIN[et];L.push({code:"IWIN",label:"יין",amount:a,detail:`(${adults} מבוגרים × ${pr.IWIN[et]} ₪)`})}
-    if(!isNotRelevant("KSH")&&kosher&&pr.IKSH[et])L.push({code:"IKSH",label:"הכשרת רב",amount:pr.IKSH[et]});
-    return L},[et,adults,children,cork,protein,ceramics,winePremium,kitchen,flowers,wine,kosher,food,totalPeople,csvData]);
+  // ═══ EXPENSE LINES ═══
+  var expLines=useMemo(function(){var L=[];
+    if(!isRNT&&P.OCHEFB[et])L.push({l:"שף בסיס",a:P.OCHEFB[et]});
+    if(!isRNT&&P.OCHEF1[et]&&tot>35)L.push({l:"שף תוספת ("+(tot-35)+" מעל 35)",a:(tot-35)*P.OCHEF1[et]});
+    if(!isRNT&&P.OCHEF2[et]&&tot>10)L.push({l:"שף תוספת ("+(tot-10)+" מעל 10)",a:(tot-10)*P.OCHEF2[et]});
+    if(!isRNT&&P.OCOOK[et]){var ck=Math.floor(tot/P.OCOOK[et])*500;if(ck>0)L.push({l:"טבח נוסף",a:ck})}
+    if(!isRNT&&P.OFOOD[et]&&!(et==="OFS"&&!food))L.push({l:"פודקוסט",a:tot*P.OFOOD[et],d:"("+tot+"×"+P.OFOOD[et]+")"});
+    if(!isRNT&&pro>0&&P.IPRO[et]){var f15=Math.min(tot,15)*30+Math.max(0,tot-15)*15;L.push({l:"חומ\"ג חלבון",a:f15*pro})}
+    if(!isRNT&&pro>0&&P.OPRO2[et])L.push({l:"חלבון לשף",a:pro*tot*P.OPRO2[et]});
+    if(!isRNT&&cer&&P.OCER[et])L.push({l:"עלות קרמיקה",a:tot*P.OCER[et]});
+    if(!isRNT&&winp&&P.OWINP[et])L.push({l:"עלות יין פרימיום",a:adt*P.OWINP[et]});
+    if((iC("FLW")||flw)&&P.OFLW[et])L.push({l:"עלות פרחים",a:P.OFLW[et]});
+    if((iC("WIN")||win)&&P.OWIN[et])L.push({l:"עלות יין",a:adt*P.OWIN[et]});
+    if(ksh&&P.OKSH[et])L.push({l:"עלות הכשרת רב",a:P.OKSH[et]});
+    if(P.OCLEAN[et])L.push({l:"נקיון",a:P.OCLEAN[et]});
+    if(P.OEVM[et])L.push({l:"מנהל אירוע",a:P.OEVM[et]});
+    if(isCmp("WTR")&&compW>0&&P.OWTR[et])L.push({l:"מלצרים",a:compW*P.OWTR[et]});
+    if(!isCmp("WTR")&&!nR("WTR")&&mw>0&&P.OWTR[et])L.push({l:"מלצרים",a:mw*P.OWTR[et]});
+    if(P.OOVH[et])L.push({l:"תקורה",a:P.OOVH[et]});
+    return L},[et,adt,chd,food,ksh,pro,crk,cer,flw,win,winp,kit,tot,compW,mw]);
 
-  // ═══ EXPENSES ═══
-  const expenseLines=useMemo(()=>{const L=[];const isRNT=et==="RNT";
-    if(!isRNT&&pr.OCHEFB[et]!=null)L.push({code:"OCHEFB",label:"שף בסיס",amount:pr.OCHEFB[et]});
-    if(!isRNT&&pr.OCHEF1[et]&&totalPeople>35){const ex=totalPeople-35;L.push({code:"OCHEF1",label:`שף תוספת (${ex} מעל 35)`,amount:ex*pr.OCHEF1[et]})}
-    if(!isRNT&&pr.OCHEF2[et]&&totalPeople>10){const ex=totalPeople-10;L.push({code:"OCHEF2",label:`שף תוספת (${ex} מעל 10)`,amount:ex*pr.OCHEF2[et]})}
-    if(!isRNT&&pr.OCOOK[et]){let c=0;if(pr.OCOOK[et]==="cook20")c=Math.floor(totalPeople/20)*500;else if(pr.OCOOK[et]==="cook28")c=Math.floor(totalPeople/28)*500;if(c>0)L.push({code:"OCOOK",label:"טבח נוסף",amount:c})}
-    if(!isRNT&&pr.OFOOD[et]){if(!(et==="OFS"&&!food)){L.push({code:"OFOOD",label:"עלות פודקוסט",amount:totalPeople*pr.OFOOD[et],detail:`(${totalPeople} × ${pr.OFOOD[et]} ₪)`})}}
-    if(!isRNT&&protein>0&&pr.OPRO1[et]){const f15=Math.min(totalPeople,15)*30,rest=Math.max(0,totalPeople-15)*15;L.push({code:"OPRO1",label:"עלות חומר גלם חלבון",amount:(f15+rest)*protein})}
-    if(!isRNT&&protein>0&&pr.OPRO2[et])L.push({code:"OPRO2",label:"עלות חלבון לשף",amount:protein*totalPeople*pr.OPRO2[et]});
-    if(!isRNT&&ceramics&&pr.OCER[et])L.push({code:"OCER",label:"עלות סדנת קרמיקה",amount:totalPeople*pr.OCER[et]});
-    if(!isRNT&&winePremium&&pr.OWINP[et])L.push({code:"OWINP",label:"עלות יין פרימיום",amount:adults*pr.OWINP[et]});
-    if((isIncluded("FLW")||flowers)&&pr.OFLW[et])L.push({code:"OFLW",label:"עלות פרחים",amount:pr.OFLW[et]});
-    if((isIncluded("WIN")||wine)&&pr.OWIN[et])L.push({code:"OWIN",label:"עלות יין",amount:adults*pr.OWIN[et]});
-    if(kosher&&pr.OKSH[et])L.push({code:"OKSH",label:"עלות הכשרת רב",amount:pr.OKSH[et]});
-    if(pr.OCLEAN[et])L.push({code:"OCLEAN",label:"נקיון",amount:pr.OCLEAN[et]});
-    if(pr.OEVM[et])L.push({code:"OEVM",label:"מנהל אירוע",amount:pr.OEVM[et]});
-    if(isComputed("WTR")&&computedWaiters>0&&pr.OWTR[et])L.push({code:"OWTR",label:"מלצרים",amount:computedWaiters*pr.OWTR[et],detail:`(${computedWaiters} × ${pr.OWTR[et]} ₪)`});
-    if(pr.OOVH[et])L.push({code:"OOVH",label:"תקורה קבועה",amount:pr.OOVH[et]});
-    return L},[et,adults,children,food,kosher,protein,cork,ceramics,flowers,wine,winePremium,kitchen,totalPeople,computedWaiters,csvData]);
+  var subI=iLines.reduce(function(s,x){return s+x.a},0);
+  var chDisc=chd*100, dscAmt=Math.round(subI*dsc/100);
+  var REV=subI-chDisc-dscAmt;
+  var vatAmt=Math.round(REV*0.18), tipAmt=Math.round(REV*tip/100);
+  var total=REV+vatAmt+tipAmt;
+  var bonus=Math.round(REV*0.03);
+  var COG=expLines.reduce(function(s,x){return s+x.a},0)+bonus;
+  var GDP=REV-COG;
 
-  const allExpenseLines=useMemo(()=>{const L=[...expenseLines];const w=inp.WTR[et];if(w&&w.includes("/")&&!w.includes("ROUNDUP")&&manualWaiters>0&&pr.OWTR[et])L.push({code:"OWTR_M",label:"מלצרים",amount:manualWaiters*pr.OWTR[et]});return L},[expenseLines,manualWaiters,et,csvData]);
-
-  const subtotalIncome=incomeLines.reduce((s,l)=>s+l.amount,0);
-  const childDiscount=children*100;
-  const discountAmount=Math.round(subtotalIncome*discount/100);
-  const REV=subtotalIncome-childDiscount-discountAmount;
-  const vatAmount=Math.round(REV*VAT_RATE);
-  const tipAmount=Math.round(REV*tip/100);
-  const totalToPay=REV+vatAmount+tipAmount;
-  const salesBonus=Math.round(REV*0.03);
-  const totalExpensesBase=allExpenseLines.reduce((s,l)=>s+l.amount,0);
-  const COG=totalExpensesBase+salesBonus;
-  const GDP=REV-COG;
-
-  // ═══ WHATSAPP MESSAGE ═══
-  function generateWhatsApp(){
-    const eL=csvData.eventLabels[et],fmt=n=>Math.round(n).toLocaleString("he-IL");
-    let m=`🏛️ *חובות הלבבות - הצעת מחיר*\n━━━━━━━━━━━━━━━━━━━━━\n\n📋 *פרטי האירוע:*\n▫️ סוג אירוע: ${eL}\n▫️ מספר מבוגרים: ${adults}\n`;
-    if(!isNotRelevant("CHD")&&children>0)m+=`▫️ מספר ילדים: ${children}\n`;
-    m+=`▫️ סה"כ אורחים: ${totalPeople}\n\n🍽️ *מה כולל האירוע:*\n`;
-    if(isIncluded("FOD"))m+=`✅ אוכל - כלול בחבילה\n`;else if(!isNotRelevant("FOD")&&food)m+=`✅ אוכל\n`;
-    if(isIncluded("WIN"))m+=`✅ יין - כלול בחבילה\n`;else if(!isNotRelevant("WIN")&&wine)m+=`✅ יין\n`;
-    if(!isNotRelevant("WINP")&&winePremium)m+=`✅ תוספת יין פרימיום\n`;
-    if(isIncluded("FLW"))m+=`✅ סידור פרחים - כלול בחבילה\n`;else if(!isNotRelevant("FLW")&&flowers)m+=`✅ סידור פרחים\n`;
-    if(!isNotRelevant("PRO")&&protein>0)m+=`✅ תוספת מנות חלבון: ${protein} לאדם\n`;
-    if(!isNotRelevant("CER")&&ceramics)m+=`✅ סדנת קרמיקה\n`;
-    if(!isNotRelevant("KSH")&&kosher)m+=`✅ הכשרת רב\n`;
-    if(!isNotRelevant("CRK")&&cork)m+=`✅ דמי חליצה\n`;
-    if(!isNotRelevant("WTR")){const wc=isComputed("WTR")?computedWaiters:manualWaiters;if(wc>0)m+=`✅ מלצרים: ${wc}\n`}
-    if(!isNotRelevant("KIT")&&kitchen)m+=`✅ שימוש במטבח\n`;
-    m+=`\n💰 *פירוט מחירים:*\n`;
-    incomeLines.forEach(l=>{m+=`▫️ ${l.label}: ${fmt(l.amount)} ₪\n`});
-    m+=`\n`;
-    if(childDiscount>0||discountAmount>0){m+=`🏷️ *הנחות:*\n`;if(childDiscount>0)m+=`▫️ הנחת ילדים (${children} ילדים × 100 ₪): -${fmt(childDiscount)} ₪\n`;if(discountAmount>0)m+=`▫️ הנחה ${discount}%: -${fmt(discountAmount)} ₪\n`;m+=`\n`}
-    m+=`━━━━━━━━━━━━━━━━━━━━━\n📊 *סיכום לתשלום:*\n▫️ סה"כ לפני מע"מ: ${fmt(REV)} ₪\n▫️ מע"מ (18%): ${fmt(vatAmount)} ₪\n`;
-    if(tipAmount>0)m+=`▫️ טיפ (${tip}%): ${fmt(tipAmount)} ₪\n`;
-    m+=`\n💎 *סה"כ לתשלום: ${fmt(totalToPay)} ₪*\n━━━━━━━━━━━━━━━━━━━━━\n\n_חובות הלבבות - חוויה קולינרית_\n_events.hovothalevavot.com_`;
+  // ═══ WHATSAPP ═══
+  function genWA(){
+    var eLabel=D.eL[et],fm=function(n){return Math.round(n).toLocaleString("he-IL")};
+    var m="🏛️ *חובות הלבבות - הצעת מחיר*\n━━━━━━━━━━━━━━━━━━━━━\n\n📋 *פרטי האירוע:*\n▫️ סוג אירוע: "+eLabel+"\n▫️ מספר מבוגרים: "+adt+"\n";
+    if(!nR("CHD")&&chd>0)m+="▫️ מספר ילדים: "+chd+"\n";
+    m+="▫️ סה\"כ אורחים: "+tot+"\n\n🍽️ *מה כולל האירוע:*\n";
+    if(iC("FOD"))m+="✅ אוכל - כלול בחבילה\n";else if(!nR("FOD")&&food)m+="✅ אוכל\n";
+    if(iC("WIN"))m+="✅ יין - כלול בחבילה\n";else if(!nR("WIN")&&win)m+="✅ יין\n";
+    if(!nR("WINP")&&winp)m+="✅ תוספת יין פרימיום\n";
+    if(iC("FLW"))m+="✅ סידור פרחים - כלול בחבילה\n";else if(!nR("FLW")&&flw)m+="✅ סידור פרחים\n";
+    if(!nR("PRO")&&pro>0)m+="✅ תוספת מנות חלבון: "+pro+" לאדם\n";
+    if(!nR("CER")&&cer)m+="✅ סדנת קרמיקה\n";
+    if(!nR("KSH")&&ksh)m+="✅ הכשרת רב\n";
+    if(!nR("CRK")&&crk)m+="✅ דמי חליצה\n";
+    if(!nR("WTR")){var wc=isCmp("WTR")?compW:mw;if(wc>0)m+="✅ מלצרים: "+wc+"\n"}
+    if(!nR("KIT")&&kit)m+="✅ שימוש במטבח\n";
+    m+="\n💰 *פירוט מחירים:*\n";
+    iLines.forEach(function(x){m+="▫️ "+x.l+": "+fm(x.a)+" ₪\n"});m+="\n";
+    if(chDisc>0||dscAmt>0){m+="🏷️ *הנחות:*\n";if(chDisc>0)m+="▫️ הנחת ילדים ("+chd+"×100): -"+fm(chDisc)+" ₪\n";if(dscAmt>0)m+="▫️ הנחה "+dsc+"%: -"+fm(dscAmt)+" ₪\n";m+="\n"}
+    m+="━━━━━━━━━━━━━━━━━━━━━\n📊 *סיכום לתשלום:*\n▫️ סה\"כ לפני מע\"מ: "+fm(REV)+" ₪\n▫️ מע\"מ (18%): "+fm(vatAmt)+" ₪\n";
+    if(tipAmt>0)m+="▫️ טיפ ("+tip+"%): "+fm(tipAmt)+" ₪\n";
+    m+="\n💎 *סה\"כ לתשלום: "+fm(total)+" ₪*\n━━━━━━━━━━━━━━━━━━━━━\n\n_חובות הלבבות - חוויה קולינרית_\n_events.hovothalevavot.com_";
     return m}
 
-  // ═══ COPY TO CLIPBOARD ═══
-  function handleCopyWhatsApp(){
-    const msg=generateWhatsApp();
-    const ta=document.createElement("textarea");ta.value=msg;ta.style.cssText="position:fixed;left:-9999px;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();
-    try{document.execCommand("copy");setCopyMsg("✓ הועתק ללוח!")}catch(e){navigator.clipboard?.writeText(msg).then(()=>setCopyMsg("✓ הועתק ללוח!")).catch(()=>setCopyMsg("שגיאה בהעתקה"))}
-    document.body.removeChild(ta);setTimeout(()=>setCopyMsg(""),3000)}
+  function copyWA(){var m=genWA();var ta=document.createElement("textarea");ta.value=m;ta.style.cssText="position:fixed;left:-9999px;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");setMsg("✓ הועתק!")}catch(e){setMsg("שגיאה")}document.body.removeChild(ta);setTimeout(function(){setMsg("")},2500)}
 
-  // ═══ CSV UPLOAD ═══
-  function handleFileUpload(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const d=loadCSVData(ev.target.result);setCsvData(d);localStorage.setItem("hlb_csv_data",JSON.stringify(d));setEventType("PRM");setCopyMsg("✓ קובץ CSV נטען ונשמר!")}catch(err){setCopyMsg("שגיאה בטעינת הקובץ")}setTimeout(()=>setCopyMsg(""),2500)};r.readAsText(f);e.target.value=''}
-
-  // ═══ PDF TEMPLATE UPLOAD ═══
-  function handlePdfTemplateUpload(e){const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const ab=ev.target.result;setPdfTemplate(ab);try{const bytes=new Uint8Array(ab);let bin='';for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);localStorage.setItem("hlb_pdf_template",btoa(bin));setCopyMsg("✓ תבנית PDF נשמרה!")}catch(err){setCopyMsg("✓ תבנית PDF נטענה")}setTimeout(()=>setCopyMsg(""),2500)};r.readAsArrayBuffer(f);e.target.value=''}
+  // ═══ PDF UPLOAD ═══
+  function handlePdf(ev){var f=ev.target.files&&ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(v){var ab=v.target.result;setPdf(ab);try{var b=new Uint8Array(ab);var s="";for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);localStorage.setItem("hlb_pdf",btoa(s));setMsg("✓ תבנית נשמרה!")}catch(e){setMsg("✓ תבנית נטענה")}setTimeout(function(){setMsg("")},2500)};r.readAsArrayBuffer(f);ev.target.value=""}
 
   // ═══ PDF GENERATION ═══
-  async function handleGeneratePdf(){
-    if(!pdfTemplate){setCopyMsg("⚠️ יש להעלות תבנית PDF (פעם ראשונה בלבד)");setTimeout(()=>setCopyMsg(""),3000);return}
-    if(!window.PDFLib){setCopyMsg("⚠️ ספריית PDF עדיין נטענת, נסה שוב");setTimeout(()=>setCopyMsg(""),3000);return}
-    setPdfGenerating(true);setCopyMsg("מייצר PDF...");
+  async function genPDF(){
+    if(!pdf){pdfRef.current&&pdfRef.current.click();return}
+    if(!window.PDFLib){setMsg("⚠️ ממתין לטעינה...");setTimeout(function(){setMsg("")},2000);return}
+    setPdfBusy(true);setMsg("מייצר PDF...");
     try{
-      const{PDFDocument,rgb}=window.PDFLib;
-      const templateDoc=await PDFDocument.load(pdfTemplate);
-      const newDoc=await PDFDocument.create();
-      const[p1,p2]=await newDoc.copyPages(templateDoc,[0,1]);newDoc.addPage(p1);newDoc.addPage(p2);
-
-      // Page 3: render WhatsApp text as image via canvas
-      const tp3=templateDoc.getPage(2);const{width:pw,height:ph}=tp3.getSize();
-      const[p3c]=await newDoc.copyPages(templateDoc,[2]);newDoc.addPage(p3c);
-      const page3=newDoc.getPage(2);
-      page3.drawRectangle({x:0,y:0,width:pw,height:ph-90,color:rgb(251/255,237/255,223/255)});
-
-      const wt=generateWhatsApp();
-      const sc=2,cW=Math.round(pw*sc),cH=Math.round((ph-100)*sc);
-      const cvs=document.createElement("canvas");cvs.width=cW;cvs.height=cH;
-      const ctx=cvs.getContext("2d");
-      ctx.fillStyle="#FBEDDF";ctx.fillRect(0,0,cW,cH);
-      const rawLines=wt.split('\n');let y=40*sc;const nS=11*sc,hS=13*sc,tS=15*sc,mg=50*sc;
-      ctx.textAlign="right";ctx.direction="rtl";const rX=cW-mg;
-      for(const rl of rawLines){
-        if(y>cH-20)break;const ln=rl.trim();if(!ln){y+=nS*0.6;continue}
-        const isSep=ln.includes('━━━');const isB=ln.startsWith('*')||(ln.includes('*')&&ln.lastIndexOf('*')>ln.indexOf('*'));
-        const dt=ln.replace(/\*/g,'').replace(/━━━━━━━━━━━━━━━━━━━━━/g,'');
-        const isTot=dt.includes('סה"כ לתשלום');const isMH=dt.includes('חובות הלבבות - הצעת מחיר');
-        const isSH=dt.includes('פרטי האירוע:')||dt.includes('מה כולל האירוע:')||dt.includes('פירוט מחירים:')||dt.includes('סיכום לתשלום:')||dt.includes('הנחות:');
-        if(isSep){ctx.strokeStyle="#C8B4AA";ctx.lineWidth=1*sc;ctx.beginPath();ctx.moveTo(mg,y);ctx.lineTo(cW-mg,y);ctx.stroke();y+=nS*0.6;continue}
-        let fs=nS,fw="400",cl="#503228";
-        if(isTot){fs=tS;fw="800";cl="#1043BF"}else if(isMH){fs=hS;fw="700";cl="#1043BF"}else if(isSH||isB){fs=nS*1.05;fw="700";cl="#1043BF"}
-        ctx.font=`${fw} ${fs}px "Assistant","Heebo","Arial Hebrew","Segoe UI",Arial,sans-serif`;ctx.fillStyle=cl;ctx.fillText(dt,rX,y);y+=fs*1.5}
-      const pngB64=cvs.toDataURL("image/png").split(",")[1];
-      const pngBytes=Uint8Array.from(atob(pngB64),c=>c.charCodeAt(0));
-      const pngImg=await newDoc.embedPng(pngBytes);
-      page3.drawImage(pngImg,{x:5,y:5,width:pw-10,height:ph-100});
-
-      if(templateDoc.getPageCount()>=4){const[p4]=await newDoc.copyPages(templateDoc,[3]);newDoc.addPage(p4)}
-      const pdfBytes=await newDoc.save();const blob=new Blob([pdfBytes],{type:"application/pdf"});
-      const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="הצעת_מחיר_חובות_הלבבות.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
-      setCopyMsg("✓ PDF הורד בהצלחה!");setTimeout(()=>setCopyMsg(""),3000);
-    }catch(err){console.error(err);setCopyMsg("שגיאה ביצירת PDF: "+err.message);setTimeout(()=>setCopyMsg(""),4000)}
-    finally{setPdfGenerating(false)}}
+      var PDFDocument=window.PDFLib.PDFDocument,rgb=window.PDFLib.rgb;
+      var tpl=await PDFDocument.load(pdf),doc=await PDFDocument.create();
+      var cp=await doc.copyPages(tpl,[0,1]);doc.addPage(cp[0]);doc.addPage(cp[1]);
+      var sz=tpl.getPage(2).getSize(),pw=sz.width,ph=sz.height;
+      var cp3=await doc.copyPages(tpl,[2]);doc.addPage(cp3[0]);var pg3=doc.getPage(2);
+      pg3.drawRectangle({x:0,y:0,width:pw,height:ph-90,color:rgb(251/255,237/255,223/255)});
+      var wt=genWA(),sc=2,cW2=Math.round(pw*sc),cH=Math.round((ph-100)*sc);
+      var cvs=document.createElement("canvas");cvs.width=cW2;cvs.height=cH;var ctx=cvs.getContext("2d");
+      ctx.fillStyle="#FBEDDF";ctx.fillRect(0,0,cW2,cH);
+      ctx.textAlign="right";ctx.direction="rtl";var rX=cW2-50*sc;var y2=40*sc;var nS=11*sc,hS=13*sc,tS=15*sc,mg=50*sc;
+      var lines=wt.split("\n");
+      for(var i=0;i<lines.length;i++){
+        if(y2>cH-20)break;var ln=lines[i].trim();if(!ln){y2+=nS*0.6;continue}
+        if(ln.indexOf("━━━")>=0){ctx.strokeStyle="#C8B4AA";ctx.lineWidth=sc;ctx.beginPath();ctx.moveTo(mg,y2);ctx.lineTo(cW2-mg,y2);ctx.stroke();y2+=nS*0.6;continue}
+        var isB=ln.indexOf("*")>=0,dt=ln.replace(/\*/g,"").replace(/━+/g,"");
+        var isT=dt.indexOf("סה\"כ לתשלום")>=0,isM=dt.indexOf("חובות הלבבות - הצעת מחיר")>=0;
+        var isS=dt.indexOf("פרטי האירוע:")>=0||dt.indexOf("מה כולל האירוע:")>=0||dt.indexOf("פירוט מחירים:")>=0||dt.indexOf("סיכום לתשלום:")>=0||dt.indexOf("הנחות:")>=0;
+        var fs=nS,fw="400",cl="#503228";
+        if(isT){fs=tS;fw="800";cl="#1043BF"}else if(isM){fs=hS;fw="700";cl="#1043BF"}else if(isS||isB){fs=nS*1.05;fw="700";cl="#1043BF"}
+        ctx.font=fw+" "+fs+"px 'Assistant','Heebo','Arial Hebrew','Segoe UI',Arial,sans-serif";ctx.fillStyle=cl;ctx.fillText(dt,rX,y2);y2+=fs*1.5}
+      var pB=cvs.toDataURL("image/png").split(",")[1];
+      var pI=await doc.embedPng(Uint8Array.from(atob(pB),function(c){return c.charCodeAt(0)}));
+      pg3.drawImage(pI,{x:5,y:5,width:pw-10,height:ph-100});
+      if(tpl.getPageCount()>=4){var cp4=await doc.copyPages(tpl,[3]);doc.addPage(cp4[0])}
+      var bytes=await doc.save();var blob=new Blob([bytes],{type:"application/pdf"});
+      var u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="הצעת_מחיר_חובות_הלבבות.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+      setMsg("✓ PDF הורד!");setTimeout(function(){setMsg("")},3000);
+    }catch(err){console.error(err);setMsg("שגיאה: "+err.message);setTimeout(function(){setMsg("")},4000)}
+    finally{setPdfBusy(false)}}
 
   // ═══ RENDER ═══
-  const e=React.createElement;
-  return e('div',{style:{minHeight:"100vh",background:`linear-gradient(170deg,${C.lightCream} 0%,${C.cream} 40%,${C.sand} 100%)`,fontFamily:"'Assistant','Heebo',sans-serif",direction:"rtl"}},
+  var cd={backgroundColor:K.wh,borderRadius:10,padding:"10px 12px",marginBottom:8,boxShadow:"0 1px 8px rgba(139,48,32,0.06)",border:"1px solid "+K.tan};
+  var rw={display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"};
+  var ckRow={display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"};
+
+  return h('div',{style:{minHeight:"100vh",background:"linear-gradient(170deg,"+K.lc+" 0%,"+K.cream+" 40%,"+K.sand+" 100%)",fontFamily:"'Assistant','Heebo',sans-serif",direction:"rtl"}},
 
     // Header
-    e('div',{style:{background:`linear-gradient(135deg,${C.brick} 0%,${C.rust} 50%,${C.darkBrick} 100%)`,padding:"24px 20px 20px",textAlign:"center",boxShadow:"0 4px 20px rgba(139,48,32,0.3)"}},
-      e('h1',{style:{margin:0,fontSize:28,fontWeight:800,color:C.cream,fontFamily:"'Playfair Display',serif",letterSpacing:1}},"חובות הלבבות"),
-      e('p',{style:{margin:"4px 0 0",fontSize:14,color:C.tan,fontWeight:300,letterSpacing:2}},"מחשבון תמחור אירועים")),
+    h('div',{style:{background:"linear-gradient(135deg,"+K.brick+" 0%,"+K.rust+" 50%,"+K.dk+" 100%)",padding:"12px 16px 10px",textAlign:"center",boxShadow:"0 3px 12px rgba(139,48,32,0.3)"}},
+      h('h1',{style:{margin:0,fontSize:22,fontWeight:800,color:K.cream,fontFamily:"'Playfair Display',serif"}},"חובות הלבבות"),
+      h('p',{style:{margin:"2px 0 0",fontSize:11,color:K.tan,fontWeight:300,letterSpacing:2}},"מחשבון תמחור אירועים")),
 
-    e('div',{style:{maxWidth:900,margin:"0 auto",padding:"16px 12px 40px"}},
+    h('div',{style:{maxWidth:900,margin:"0 auto",padding:"10px 10px 30px"}},
 
-      // Upload Buttons
-      e('div',{style:{display:"flex",justifyContent:"flex-start",marginBottom:12,gap:10,alignItems:"center",flexWrap:"wrap"}},
-        e('button',{onClick:()=>fileInputRef.current?.click(),style:{padding:"8px 18px",borderRadius:8,backgroundColor:C.terracotta,color:C.white,border:"none",cursor:"pointer",fontFamily:"'Assistant',sans-serif",fontSize:13,fontWeight:600,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}},"📁 העלאת CSV"),
-        e('input',{ref:fileInputRef,type:"file",accept:".csv",onChange:handleFileUpload,style:{display:"none"}}),
-        e('button',{onClick:()=>pdfInputRef.current?.click(),style:{padding:"8px 18px",borderRadius:8,backgroundColor:pdfTemplate?C.sage:C.brick,color:C.white,border:"none",cursor:"pointer",fontFamily:"'Assistant',sans-serif",fontSize:13,fontWeight:600,boxShadow:"0 2px 8px rgba(0,0,0,0.15)"}},pdfTemplate?"✓ תבנית PDF מוכנה":"📄 העלאת תבנית PDF"),
-        e('input',{ref:pdfInputRef,type:"file",accept:".pdf",onChange:handlePdfTemplateUpload,style:{display:"none"}})),
+      // Event Type row
+      h('div',{style:Object.assign({},cd,{display:"flex",alignItems:"center",gap:10})},
+        h('label',{style:{fontSize:14,fontWeight:700,color:K.brick,whiteSpace:"nowrap"}},"סוג אירוע"),
+        h('select',{value:et,onChange:function(ev){setET(ev.target.value)},style:{flex:1,padding:"6px 10px",borderRadius:6,border:"2px solid "+K.brick,backgroundColor:K.lc,fontSize:14,fontWeight:600,color:K.dk,fontFamily:"'Assistant',sans-serif"}},
+          D.eventTypes.map(function(t){return h('option',{key:t,value:t},D.eL[t])}))),
 
-      // Event Type
-      e('div',{style:{backgroundColor:C.white,borderRadius:12,padding:16,marginBottom:12,boxShadow:"0 2px 12px rgba(139,48,32,0.08)",border:`1px solid ${C.tan}`}},
-        e('label',{style:{fontSize:16,fontWeight:700,color:C.brick,display:"block",marginBottom:8}},"סוג אירוע"),
-        e('select',{value:eventType,onChange:ev=>setEventType(ev.target.value),style:{width:"100%",padding:"10px 14px",borderRadius:8,border:`2px solid ${C.brick}`,backgroundColor:C.lightCream,fontSize:16,fontWeight:600,color:C.darkBrick,fontFamily:"'Assistant',sans-serif",cursor:"pointer"}},csvData.eventTypes.map(t=>e('option',{key:t,value:t},csvData.eventLabels[t])))),
+      // Parameters Card
+      h('div',{style:cd},
+        h('div',{style:{fontSize:14,fontWeight:700,color:K.brick,marginBottom:6,borderBottom:"2px solid "+K.cream,paddingBottom:4}},"פרמטרים"),
 
-      // Parameters
-      e('div',{style:{backgroundColor:C.white,borderRadius:12,padding:16,marginBottom:12,boxShadow:"0 2px 12px rgba(139,48,32,0.08)",border:`1px solid ${C.tan}`}},
-        e('h2',{style:{fontSize:16,fontWeight:700,color:C.brick,margin:"0 0 12px",borderBottom:`2px solid ${C.cream}`,paddingBottom:8}},"פרמטרי האירוע"),
-        e('div',{style:{display:"flex",flexDirection:"column",gap:12}},
-          adultRange&&e(NumberSlider,{label:"כמות מבוגרים",min:adultRange[0],max:adultRange[1],value:adults,onChange:setAdults}),
-          childRange&&e(NumberSlider,{label:"כמות ילדים",min:childRange[0],max:childRange[1],value:children,onChange:setChildren,note:children>0?`הנחה של 100 ₪ לילד`:null}),
-          e(ComputedField,{label:"סה״כ אנשים",value:totalPeople}),
-          !isNotRelevant("FOD")&&!isIncluded("FOD")&&e(CheckboxField,{label:"האם נדרש אוכל?",checked:food,onChange:ev=>setFood(ev.target.checked)}),
-          isIncluded("FOD")&&e(IncludedField,{label:"אוכל"}),
-          !isNotRelevant("KSH")&&e(CheckboxField,{label:"הכשרת רב",checked:kosher,onChange:ev=>setKosher(ev.target.checked)}),
-          !isNotRelevant("WTR")&&isComputed("WTR")&&e(ComputedField,{label:"מלצרים",value:computedWaiters}),
-          !isNotRelevant("WTR")&&!isComputed("WTR")&&e(SelectField,{label:"מלצרים",options:[{value:"0",label:"0"},{value:"1",label:"1"},{value:"2",label:"2"}],value:String(manualWaiters),onChange:v=>setManualWaiters(Number(v))}),
-          !isNotRelevant("PRO")&&e(SelectField,{label:"תוספת מנות חלבון (לאדם)",options:[{value:"0",label:"0"},{value:"1",label:"1"},{value:"2",label:"2"}],value:String(protein),onChange:v=>setProtein(Number(v))}),
-          !isNotRelevant("CRK")&&e(CheckboxField,{label:"דמי חליצה",checked:cork,onChange:ev=>setCork(ev.target.checked)}),
-          !isNotRelevant("CER")&&e(CheckboxField,{label:"סדנת קרמיקה",checked:ceramics,onChange:ev=>setCeramics(ev.target.checked)}),
-          !isNotRelevant("FLW")&&!isIncluded("FLW")&&e(CheckboxField,{label:"סידור פרחים",checked:flowers,onChange:ev=>setFlowers(ev.target.checked)}),
-          isIncluded("FLW")&&e(IncludedField,{label:"סידור פרחים"}),
-          !isNotRelevant("WIN")&&!isIncluded("WIN")&&e(CheckboxField,{label:"יין",checked:wine,onChange:ev=>setWine(ev.target.checked)}),
-          isIncluded("WIN")&&e(IncludedField,{label:"יין"}),
-          !isNotRelevant("WINP")&&e(CheckboxField,{label:"תוספת יין פרימיום",checked:winePremium,onChange:ev=>setWinePremium(ev.target.checked)}),
-          !isNotRelevant("KIT")&&e(CheckboxField,{label:"שימוש במטבח",checked:kitchen,onChange:ev=>setKitchen(ev.target.checked)}),
-          e(SliderField,{label:"אחוזי הנחה",min:0,max:15,value:discount,onChange:setDiscount}),
-          e(SliderField,{label:"אחוזי טיפ",min:0,max:15,value:tip,onChange:setTip}))),
+        // Row 1: Adults + Children side by side
+        h('div',{style:rw},
+          aR&&h(NumSld,{label:"מבוגרים",min:aR[0],max:aR[1],value:adt,onChange:setAdt}),
+          cR&&h(NumSld,{label:"ילדים",min:cR[0],max:cR[1],value:chd,onChange:setChd})),
 
-      // Pricing - Two Columns
-      e('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}},
+        // Row 2: Total + Waiters + Protein
+        h('div',{style:Object.assign({},rw,{marginTop:6})},
+          h('div',{style:{display:"flex",alignItems:"center",gap:4,fontSize:12,color:K.dk}},
+            h('span',{style:{fontWeight:600}},"סה״כ:"),
+            h('span',{style:{fontWeight:700,color:K.brick,fontSize:14}},tot)),
+          isCmp("WTR")&&h('div',{style:{display:"flex",alignItems:"center",gap:4,fontSize:12,color:K.dk}},
+            h('span',{style:{fontWeight:600}},"מלצרים:"),
+            h('span',{style:{fontWeight:700,color:K.brick,fontSize:14}},compW)),
+          !nR("WTR")&&!isCmp("WTR")&&h(Sel3,{label:"מלצרים",value:mw,onChange:setMw}),
+          !nR("PRO")&&h(Sel3,{label:"חלבון",value:pro,onChange:setPro})),
+
+        // Row 3: Checkboxes
+        h('div',{style:Object.assign({},ckRow,{marginTop:6})},
+          !nR("FOD")&&!iC("FOD")&&h(Chk,{label:"אוכל",checked:food,onChange:function(ev){setFood(ev.target.checked)}}),
+          iC("FOD")&&h(Inc,{label:"אוכל"}),
+          !nR("KSH")&&h(Chk,{label:"הכשרת רב",checked:ksh,onChange:function(ev){setKsh(ev.target.checked)}}),
+          !nR("CRK")&&h(Chk,{label:"דמי חליצה",checked:crk,onChange:function(ev){setCrk(ev.target.checked)}}),
+          !nR("CER")&&h(Chk,{label:"קרמיקה",checked:cer,onChange:function(ev){setCer(ev.target.checked)}})),
+
+        // Row 4: More checkboxes
+        h('div',{style:Object.assign({},ckRow,{marginTop:4})},
+          !nR("FLW")&&!iC("FLW")&&h(Chk,{label:"פרחים",checked:flw,onChange:function(ev){setFlw(ev.target.checked)}}),
+          iC("FLW")&&h(Inc,{label:"פרחים"}),
+          !nR("WIN")&&!iC("WIN")&&h(Chk,{label:"יין",checked:win,onChange:function(ev){setWin(ev.target.checked)}}),
+          iC("WIN")&&h(Inc,{label:"יין"}),
+          !nR("WINP")&&h(Chk,{label:"יין פרימיום",checked:winp,onChange:function(ev){setWinp(ev.target.checked)}}),
+          !nR("KIT")&&h(Chk,{label:"מטבח",checked:kit,onChange:function(ev){setKit(ev.target.checked)}})),
+
+        // Row 5: Discount + Tip sliders side by side
+        h('div',{style:Object.assign({},rw,{marginTop:6})},
+          h(PctSld,{label:"הנחה",min:0,max:15,value:dsc,onChange:setDsc}),
+          h(PctSld,{label:"טיפ",min:0,max:15,value:tip,onChange:setTip}))),
+
+      // ═══ PRICING TWO COLUMNS ═══
+      h('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+
         // Income
-        e('div',{style:{backgroundColor:C.white,borderRadius:12,padding:16,boxShadow:"0 2px 12px rgba(139,48,32,0.08)",border:`1px solid ${C.tan}`}},
-          e('h2',{style:{fontSize:16,fontWeight:700,color:"#2E7D32",margin:"0 0 12px",borderBottom:"2px solid #C8E6C9",paddingBottom:8,display:"flex",alignItems:"center",gap:6}},"💰 הכנסות"),
-          incomeLines.map((l,i)=>e(PricingLine,{key:i,label:l.label,amount:l.amount,detail:l.detail})),
-          e('div',{style:{height:1,backgroundColor:C.tan,margin:"8px 0"}}),
-          e(SummaryLine,{label:"סה״כ הכנסות (ברוטו)",amount:subtotalIncome}),
-          childDiscount>0&&e(PricingLine,{label:`הנחת ילדים (${children} × 100 ₪)`,amount:-childDiscount}),
-          discountAmount>0&&e(PricingLine,{label:`הנחה (${discount}%)`,amount:-discountAmount}),
-          e(SummaryLine,{label:"סה״כ לפני מע״מ (REV)",amount:REV}),
-          e(PricingLine,{label:'מע"מ (18%)',amount:vatAmount}),
-          tipAmount>0&&e(PricingLine,{label:`טיפ (${tip}%)`,amount:tipAmount}),
-          e(SummaryLine,{label:"סה״כ לתשלום",amount:totalToPay,isTotal:true})),
+        h('div',{style:cd},
+          h('div',{style:{fontSize:13,fontWeight:700,color:"#2E7D32",marginBottom:6,borderBottom:"2px solid #C8E6C9",paddingBottom:3}},"💰 הכנסות"),
+          iLines.map(function(x,i){return h(PL,{key:i,label:x.l,amount:x.a,detail:x.d})}),
+          h('div',{style:{height:1,backgroundColor:K.tan,margin:"4px 0"}}),
+          h(SL,{label:"סה״כ ברוטו",amount:subI}),
+          chDisc>0&&h(PL,{label:"הנחת ילדים ("+chd+"×100)",amount:-chDisc}),
+          dscAmt>0&&h(PL,{label:"הנחה ("+dsc+"%)",amount:-dscAmt}),
+          h(SL,{label:"לפני מע״מ (REV)",amount:REV}),
+          h(PL,{label:"מע\"מ (18%)",amount:vatAmt}),
+          tipAmt>0&&h(PL,{label:"טיפ ("+tip+"%)",amount:tipAmt}),
+          h(SL,{label:"סה״כ לתשלום",amount:total,isTotal:true})),
+
         // Expenses
-        e('div',{style:{backgroundColor:C.white,borderRadius:12,padding:16,boxShadow:"0 2px 12px rgba(139,48,32,0.08)",border:`1px solid ${C.tan}`}},
-          e('h2',{style:{fontSize:16,fontWeight:700,color:"#D32F2F",margin:"0 0 12px",borderBottom:"2px solid #FFCDD2",paddingBottom:8,display:"flex",alignItems:"center",gap:6}},"📊 הוצאות"),
-          allExpenseLines.map((l,i)=>e(PricingLine,{key:i,label:l.label,amount:l.amount,detail:l.detail,isExpense:true})),
-          e('div',{style:{height:1,backgroundColor:C.tan,margin:"8px 0"}}),
-          e(PricingLine,{label:"בונוס מנהל מכירות (3%)",amount:salesBonus,isExpense:true,detail:`(3% × ${Math.round(REV).toLocaleString("he-IL")} ₪)`}),
-          e(SummaryLine,{label:"סה״כ הוצאות (COG)",amount:COG,isExpense:true}))),
+        h('div',{style:cd},
+          h('div',{style:{fontSize:13,fontWeight:700,color:"#D32F2F",marginBottom:6,borderBottom:"2px solid #FFCDD2",paddingBottom:3}},"📊 הוצאות"),
+          expLines.map(function(x,i){return h(PL,{key:i,label:x.l,amount:x.a,detail:x.d,isExp:true})}),
+          h('div',{style:{height:1,backgroundColor:K.tan,margin:"4px 0"}}),
+          h(PL,{label:"בונוס מכירות (3%)",amount:bonus,isExp:true}),
+          h(SL,{label:"סה״כ הוצאות (COG)",amount:COG,isExp:true}))),
 
       // Gross Profit
-      e('div',{style:{backgroundColor:C.white,borderRadius:12,padding:16,marginBottom:12,boxShadow:"0 2px 12px rgba(139,48,32,0.08)",border:`2px solid ${GDP>=0?'#2E7D32':'#D32F2F'}`}},
-        e('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",direction:"rtl"}},
-          e('span',{style:{fontSize:18,fontWeight:800,color:C.darkBrick}},"רווח גולמי (GDP)"),
-          e('span',{style:{fontSize:22,fontWeight:800,color:GDP>=0?"#2E7D32":"#D32F2F",direction:"ltr"}},formatNIS(GDP))),
-        e('div',{style:{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:13,color:C.sage,direction:"rtl"}},
-          e('span',null,`אחוז רווח: ${REV>0?Math.round(GDP/REV*100):0}%`),
-          e('span',null,`REV: ${formatNIS(REV)} | COG: ${formatNIS(COG)}`))),
+      h('div',{style:Object.assign({},cd,{border:"2px solid "+(GDP>=0?"#2E7D32":"#D32F2F"),padding:"8px 12px"})},
+        h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h('span',{style:{fontSize:15,fontWeight:800,color:K.dk}},"רווח גולמי (GDP)"),
+          h('span',{style:{fontSize:18,fontWeight:800,color:GDP>=0?"#2E7D32":"#D32F2F",direction:"ltr"}},fN(GDP))),
+        h('div',{style:{display:"flex",justifyContent:"space-between",marginTop:3,fontSize:11,color:K.sage}},
+          h('span',null,"רווח: "+(REV>0?Math.round(GDP/REV*100):0)+"%"),
+          h('span',null,"REV: "+fN(REV)+" | COG: "+fN(COG)))),
 
-      // WhatsApp Button
-      e('button',{onClick:handleCopyWhatsApp,style:{width:"100%",padding:"14px 20px",borderRadius:12,backgroundColor:"#25D366",color:C.white,border:"none",cursor:"pointer",fontFamily:"'Assistant',sans-serif",fontSize:17,fontWeight:700,boxShadow:"0 4px 15px rgba(37,211,102,0.3)",display:"flex",alignItems:"center",justifyContent:"center",gap:8}},e('span',null,"📋"),e('span',null,"העתק הצעת מחיר לווטסאפ")),
+      // Buttons row
+      h('div',{style:{display:"flex",gap:8,marginTop:4}},
+        h('button',{onClick:copyWA,style:{flex:1,padding:"10px",borderRadius:10,backgroundColor:"#25D366",color:K.wh,border:"none",cursor:"pointer",fontFamily:"'Assistant',sans-serif",fontSize:15,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}},h('span',null,"📋"),h('span',null,"העתק לווטסאפ")),
+        h('button',{onClick:genPDF,disabled:pdfBusy,style:{flex:1,padding:"10px",borderRadius:10,backgroundColor:pdf?K.brick:K.sand,color:K.wh,border:"none",cursor:pdf?"pointer":"default",fontFamily:"'Assistant',sans-serif",fontSize:15,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6,opacity:pdfBusy?0.7:1}},h('span',null,"📄"),h('span',null,pdfBusy?"מייצר...":pdf?"הורד PDF":"טען תבנית PDF"))),
 
-      // PDF Button
-      e('button',{onClick:handleGeneratePdf,disabled:pdfGenerating,style:{width:"100%",padding:"14px 20px",borderRadius:12,marginTop:10,backgroundColor:pdfTemplate?C.brick:C.sand,color:C.white,border:"none",cursor:pdfTemplate?"pointer":"default",fontFamily:"'Assistant',sans-serif",fontSize:17,fontWeight:700,boxShadow:pdfTemplate?"0 4px 15px rgba(183,79,62,0.3)":"none",display:"flex",alignItems:"center",justifyContent:"center",gap:8,opacity:pdfGenerating?.7:1}},e('span',null,"📄"),e('span',null,pdfGenerating?"מייצר PDF...":pdfTemplate?"הורד הצעת מחיר PDF":"העלה תבנית PDF קודם")),
+      // Hidden PDF input
+      h('input',{ref:pdfRef,type:"file",accept:".pdf",onChange:handlePdf,style:{display:"none"}}),
 
-      // Status Message
-      copyMsg&&e('div',{style:{textAlign:"center",marginTop:10,padding:"8px 16px",borderRadius:8,backgroundColor:copyMsg.includes("שגיאה")||copyMsg.includes("⚠️")?"#FFEBEE":"#E8F5E9",color:copyMsg.includes("שגיאה")||copyMsg.includes("⚠️")?"#D32F2F":"#2E7D32",fontWeight:700,fontSize:15,fontFamily:"'Assistant',sans-serif"}},copyMsg)))
+      // Status
+      msg&&h('div',{style:{textAlign:"center",marginTop:6,padding:"5px 12px",borderRadius:6,backgroundColor:msg.indexOf("שגיאה")>=0||msg.indexOf("⚠️")>=0?"#FFEBEE":"#E8F5E9",color:msg.indexOf("שגיאה")>=0||msg.indexOf("⚠️")>=0?"#D32F2F":"#2E7D32",fontWeight:700,fontSize:13}},msg))
+  )
 }
 
-ReactDOM.render(React.createElement(App),document.getElementById("root"));
+ReactDOM.render(h(App),document.getElementById("root"));
 </script>
 </body>
 </html>
