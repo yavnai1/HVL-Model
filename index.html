@@ -459,7 +459,7 @@
         setMondayStatus('uploading');
         try {
           const formData = new FormData();
-          const query = `mutation ($file: File!) { add_file_to_column(item_id: ${mondayItemId}, column_id: "files", file: $file) { id } }`;
+          const query = `mutation ($file: File!) { add_file_to_column(item_id: ${mondayItemId}, column_id: "file_mm0nenx4", file: $file) { id } }`;
           formData.append('query', query);
           formData.append('variables[file]', blob, filename);
 
