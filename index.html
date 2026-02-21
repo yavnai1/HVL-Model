@@ -447,15 +447,38 @@
       const [mondayStatus, setMondayStatus] = useState('');
 
       // ========== MONDAY UPLOAD ==========
-      const uploadToMonday = async (blob, filename) => {
-        let token = localStorage.getItem('monday_token');
-        if (!token) {
-          const t = prompt('הזן את Monday API Token שלך (יישמר לשימוש חוזר):');
-          if (!t) return;
-          localStorage.setItem('monday_token', t.trim());
-          token = t.trim();
-        }
+      // ========== MONDAY UPLOAD via Make Webhook ==========
+      const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/6flbk8gxd5hzzlw185u7w1eh6gnc7l1v';
 
+      const uploadToMonday = async (blob, filename) => {
+        setMondayStatus('uploading');
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          const res = await fetch(MAKE_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              itemId: mondayItemId,
+              filename: filename,
+              fileBase64: base64
+            })
+          });
+
+          if (!res.ok) throw new Error('Webhook error: ' + res.status);
+          setMondayStatus('success');
+          setTimeout(() => setMondayStatus(''), 3000);
+        } catch (err) {
+          console.error('Monday upload failed:', err);
+          setMondayStatus('error');
+          setTimeout(() => setMondayStatus(''), 4000);
+        }
+      };
         setMondayStatus('uploading');
         try {
           const formData = new FormData();
