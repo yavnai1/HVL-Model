@@ -112,14 +112,14 @@
       const [eventType, setEventType] = useState('PRM');
       const [params, setParams] = useState({});
 
+      // ========== MONDAY INTEGRATION ==========
       const urlParams = new URLSearchParams(window.location.search);
       const mondayItemId = urlParams.get('itemId');
+      const mondayBoardId = urlParams.get('boardId');
 
       const [copied, setCopied] = useState(false);
       const [showPreview, setShowPreview] = useState(false);
       const [pdfLoading, setPdfLoading] = useState(false);
-      const [mondayStatus, setMondayStatus] = useState('');
-      const [saved, setSaved] = useState(false);
 
       useEffect(() => {
         const config = pricingData[eventType];
@@ -358,10 +358,18 @@
         }
         detailRows += `<tr><td style="padding:10px 20px;color:rgba(255,255,255,0.7);font-size:13px;">סה"כ משתתפים</td><td style="padding:10px 20px;color:#fff;font-weight:700;font-size:15px;">${totalGuests}</td></tr>`;
 
+        const printStyles = forPdf ? `
+        @media print {
+          body { padding:0; margin:0; }
+          .page { box-shadow:none; border-radius:0; max-width:100%; }
+        }
+        @page { size:A4; margin:10mm; }` : '';
+
         return `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head>
 <meta charset="UTF-8">
+<title>הצעת מחיר ${quoteNum} - חובות הלבבות</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -383,6 +391,7 @@
   .footer strong { color:rgba(255,255,255,0.8); font-weight:600; }
   .tags-row { display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 0; }
   .tag { background:rgba(255,255,255,0.1); color:#fff; padding:5px 14px; border-radius:16px; font-size:12px; font-weight:400; border:1px solid rgba(255,255,255,0.15); }
+  ${printStyles}
 </style>
 </head>
 <body>
@@ -413,12 +422,31 @@
 
       const handleCopyWhatsApp = () => {
         const message = generateWhatsAppMessage();
-        navigator.clipboard.writeText(message).then(() => {
+        const ta = document.createElement('textarea');
+        ta.value = message;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand('copy');
           setCopied(true);
           setTimeout(() => setCopied(false), 2500);
-        });
+        } catch (err) {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(message).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2500);
+            });
+          }
+        }
+        document.body.removeChild(ta);
       };
 
+      const [saved, setSaved] = useState(false);
+      const [mondayStatus, setMondayStatus] = useState('');
+
+      // ========== MONDAY UPLOAD via Make Webhook ==========
       const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/6flbk8gxd5hzzlw185u7w1eh6gnc7l1v';
 
       const uploadToMonday = async (blob, filename) => {
@@ -431,14 +459,21 @@
             reader.readAsDataURL(blob);
           });
 
-          await fetch(MAKE_WEBHOOK_URL, {
+          const res = await fetch(MAKE_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ itemId: mondayItemId, filename, fileBase64: base64 })
+            body: JSON.stringify({
+              itemId: mondayItemId,
+              filename: filename,
+              fileBase64: base64
+            })
           });
+
+          if (!res.ok) throw new Error('Webhook error: ' + res.status);
           setMondayStatus('success');
           setTimeout(() => setMondayStatus(''), 3000);
         } catch (err) {
+          console.error('Monday upload failed:', err);
           setMondayStatus('error');
           setTimeout(() => setMondayStatus(''), 4000);
         }
@@ -446,118 +481,487 @@
 
       const handleSaveFile = async () => {
         setSaved(true);
+        const html = generateHTMLQuote();
+
         if (!window.html2canvas) {
           const script = document.createElement('script');
           script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
           document.head.appendChild(script);
-          await new Promise(r => script.onload = r);
+          await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; });
         }
 
         const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:700px;height:1px;';
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:700px;height:1px;border:none;';
         document.body.appendChild(iframe);
-        iframe.contentDocument.write(generateHTMLQuote());
-        iframe.contentDocument.close();
+
+        const doc = iframe.contentDocument;
+        doc.open();
+        doc.write(html);
+        doc.close();
 
         await new Promise(r => setTimeout(r, 1200));
 
-        const canvas = await window.html2canvas(iframe.contentDocument.querySelector('.page'), {
-          scale: 2, backgroundColor: '#3558A0', width: 680
+        const pageEl = doc.querySelector('.page');
+        const targetEl = pageEl || doc.body;
+
+        try {
+          const canvas = await window.html2canvas(targetEl, {
+            scale: 2, useCORS: true, allowTaint: true,
+            backgroundColor: '#3558A0', width: 680, windowWidth: 700, logging: false,
+          });
+
+          canvas.toBlob((blob) => {
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yy = String(now.getFullYear()).slice(-2);
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const filename = `הצעת_מחיר_${dd}${mm}${yy}_${hh}${min}.png`;
+
+            document.body.removeChild(iframe);
+
+            if (mondayItemId) {
+              uploadToMonday(blob, filename);
+            } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }
+            setTimeout(() => setSaved(false), 2500);
+          }, 'image/png');
+        } catch (err) {
+          console.error('html2canvas failed, using fallback:', err);
+          document.body.removeChild(iframe);
+          generatePNGFallback();
+          setTimeout(() => setSaved(false), 2500);
+        }
+      };
+
+      const generatePNGFallback = () => {
+        const calc = calculatePricing();
+        const config = pricingData[eventType];
+        const totalGuests = (params.ADT || 0) + (params.CHD || 0);
+        const adults = params.ADT || 0;
+        const children = params.CHD || 0;
+        const eventNames = { PRM: 'פרימיום', OFS: 'אופסייט', CKT: 'קוקטלים', BRC: "בראנץ'", RNT: 'השכרת חלל' };
+
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yy = String(now.getFullYear()).slice(-2);
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+
+        const W = 680, scale = 2;
+        const BG = '#3558A0', GOLD = '#C8A84E', WHITE = '#ffffff', LIGHT = 'rgba(255,255,255,0.7)';
+
+        const lines = [];
+        const push = (text, style = {}) => lines.push({ text, ...style });
+
+        push('הצעת מחיר – חובות הלבבות', { size: 22, weight: 'bold', color: WHITE, y: 60 });
+        push(`מספר הצעה: ${dd}${mm}${yy}-${hh}${min}`, { size: 13, color: LIGHT, y: 85 });
+        push('פרטי האירוע', { size: 14, weight: 'bold', color: GOLD, y: 130 });
+        push(`סוג: ${eventNames[eventType]}  |  מבוגרים: ${adults}${children > 0 ? `  |  ילדים: ${children}` : ''}`, { size: 14, color: WHITE, y: 160 });
+        push('פירוט עלויות', { size: 14, weight: 'bold', color: GOLD, y: 200 });
+
+        let yPos = 230;
+        calc.income.forEach(item => {
+          push(`${item.label}: ${Math.round(item.amount).toLocaleString('he-IL')} ₪`, { size: 13, color: WHITE, y: yPos });
+          yPos += 28;
+        });
+
+        if (calc.childrenDiscount < 0) {
+          push(`הנחה לילדים: ${Math.round(calc.childrenDiscount).toLocaleString('he-IL')} ₪`, { size: 13, color: '#ffb3b3', y: yPos }); yPos += 28;
+        }
+        if (calc.percentageDiscount < 0) {
+          push(`הנחה ${params.DSC}%: ${Math.round(calc.percentageDiscount).toLocaleString('he-IL')} ₪`, { size: 13, color: '#ffb3b3', y: yPos }); yPos += 28;
+        }
+
+        yPos += 10;
+        push(`לפני מע"מ: ${Math.round(calc.REV).toLocaleString('he-IL')} ₪`, { size: 14, color: WHITE, y: yPos }); yPos += 30;
+        push(`מע"מ 18%: ${Math.round(calc.vat).toLocaleString('he-IL')} ₪`, { size: 14, color: WHITE, y: yPos }); yPos += 30;
+        if ((params.TIP || 0) > 0) { push(`טיפ ${params.TIP}%: ${Math.round(calc.tip).toLocaleString('he-IL')} ₪`, { size: 14, color: WHITE, y: yPos }); yPos += 30; }
+        yPos += 10;
+        push(`סה"כ לתשלום: ${Math.round(calc.finalTotal).toLocaleString('he-IL')} ₪`, { size: 20, weight: 'bold', color: GOLD, y: yPos }); yPos += 50;
+        push('חובות הלבבות  |  054.8977.896', { size: 12, color: LIGHT, y: yPos + 20 });
+
+        const totalH = yPos + 80;
+        const canvas = document.createElement('canvas');
+        canvas.width = W * scale;
+        canvas.height = totalH * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, W, totalH);
+
+        lines.forEach(line => {
+          ctx.font = `${line.weight || 'normal'} ${line.size || 14}px system-ui, sans-serif`;
+          ctx.fillStyle = line.color || WHITE;
+          ctx.textAlign = 'center';
+          ctx.fillText(line.text, W / 2, line.y);
         });
 
         canvas.toBlob((blob) => {
-          const filename = `הצעת_מחיר_${Date.now()}.png`;
-          if (mondayItemId) uploadToMonday(blob, filename);
-          else {
+          const filename = `הצעת_מחיר_${dd}${mm}${yy}_${hh}${min}.png`;
+          if (mondayItemId) {
+            uploadToMonday(blob, filename);
+          } else {
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
+            a.href = url;
             a.download = filename;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
           }
-          setSaved(false);
-        });
-        document.body.removeChild(iframe);
+        }, 'image/png');
       };
 
+      // ========== PDF GENERATION ==========
       const handleGeneratePDF = () => {
-        const win = window.open('', '_blank');
-        win.document.write(generateHTMLQuote());
-        win.document.close();
-        setTimeout(() => win.print(), 500);
+        setPdfLoading(true);
+        try {
+          const baseHtml = generateHTMLQuote(true);
+          const htmlWithPrint = baseHtml.replace('</body>', `
+<div style="text-align:center;padding:20px;position:fixed;bottom:0;left:0;right:0;background:#2c4d8a;z-index:999;" class="no-print-btn">
+  <button onclick="this.parentElement.style.display='none';window.print();" style="background:#C8A84E;color:#1e3a5f;border:none;padding:14px 40px;font-size:16px;font-weight:700;border-radius:8px;cursor:pointer;font-family:'Heebo',sans-serif;">שמור כ-PDF</button>
+</div>
+<style>@media print{.no-print-btn{display:none!important}}</style>
+</body>`);
+          const blob = new Blob([htmlWithPrint], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const now = new Date();
+          const dd = String(now.getDate()).padStart(2, '0');
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const yy = String(now.getFullYear()).slice(-2);
+          a.download = `הצעת_מחיר_${dd}${mm}${yy}.html`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error('PDF error:', err);
+        } finally {
+          setPdfLoading(false);
+        }
       };
 
       const calc = calculatePricing();
       const config = pricingData[eventType];
 
-      const Toggle = ({ checked, onChange, label, included }) => (
-        <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border-2 transition-all ${included ? 'bg-amber-100 border-amber-300' : (checked ? 'bg-amber-100 border-amber-400' : 'bg-amber-50 border-amber-200')}`}>
-          <input type="checkbox" checked={included || checked} onChange={onChange} disabled={included} className="w-4 h-4 accent-amber-600" />
-          <span className="text-gray-700 font-semibold text-sm">{label} {included && '(כלול)'}</span>
-        </label>
-      );
+      const eventTypes = [
+        { key: 'PRM', label: 'פרימיום', icon: '✨' },
+        { key: 'OFS', label: 'אופסייט', icon: '🏕️' },
+        { key: 'CKT', label: 'קוקטלים', icon: '🍸' },
+        { key: 'BRC', label: "בראנץ'", icon: '🥐' },
+        { key: 'RNT', label: 'השכרת חלל', icon: '🏛️' },
+      ];
+
+      const Toggle = ({ checked, onChange, label, included }) => {
+        if (included) return (
+          <div className="bg-amber-50 px-3 py-2 rounded-lg border-2 border-amber-200 flex items-center justify-between">
+            <span className="text-gray-700 font-semibold text-sm">{label}</span>
+            <span className="text-xs bg-amber-200 text-amber-800 font-bold px-2 py-0.5 rounded-full">כלול</span>
+          </div>
+        );
+        return (
+          <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border-2 transition-all ${checked ? 'bg-amber-100 border-amber-400 shadow-sm' : 'bg-amber-50 border-amber-200 hover:border-amber-300'}`}>
+            <input type="checkbox" checked={checked} onChange={onChange} className="w-4 h-4 accent-amber-600" />
+            <span className="text-gray-700 font-semibold text-sm">{label}</span>
+            {checked && <span className="mr-auto text-amber-600 text-xs font-bold">✓</span>}
+          </label>
+        );
+      };
 
       return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-3" dir="rtl">
+        <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-3" dir="rtl" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
           <div className="max-w-7xl mx-auto">
-            <div className="bg-amber-700 text-white rounded-xl p-5 mb-5 text-center shadow-lg">
-              <h1 className="text-2xl font-bold">מערכת תמחור – חובות הלבבות</h1>
-              {mondayItemId && <div className="mt-2 text-xs opacity-80">מחובר לפריט מונדיי: {mondayItemId}</div>}
+            {/* Header */}
+            <div className="bg-gradient-to-l from-amber-700 to-orange-600 text-white rounded-xl shadow-lg p-5 mb-5 flex items-center justify-center gap-5">
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center shadow-inner overflow-hidden border-2 border-amber-200">
+                  <svg viewBox="0 0 100 120" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="60" rx="46" ry="56" stroke="#3d4fa0" strokeWidth="3" fill="#fdf8f0"/>
+                    <path d="M50 82 C50 82 26 65 26 50 C26 41 33 36 41 40 C45.5 42 50 48 50 48 C50 48 54.5 42 59 40 C67 36 74 41 74 50 C74 65 50 82 50 82Z" stroke="#3d4fa0" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M40 52 Q45 46 50 52 Q55 58 60 52" stroke="#3d4fa0" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                    <circle cx="8" cy="60" r="2.5" fill="#3d4fa0"/>
+                    <circle cx="92" cy="60" r="2.5" fill="#3d4fa0"/>
+                    <text x="50" y="28" textAnchor="middle" fontFamily="serif" fontSize="11" fill="#3d4fa0" fontWeight="bold">חובות</text>
+                    <text x="50" y="105" textAnchor="middle" fontFamily="serif" fontSize="11" fill="#3d4fa0" fontWeight="bold">הלבבות</text>
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold">מערכת תמחור אירועים</h1>
+                <p className="mt-0.5 text-amber-100">חובות הלבבות</p>
+                {mondayItemId && (
+                  <div className="mt-2 inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                    📋 מחובר ל-Monday #{mondayItemId}
+                  </div>
+                )}
+              </div>
+              <div className="flex-shrink-0 w-16"></div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {/* Inputs */}
-              <div className="bg-white rounded-xl shadow p-5">
-                <div className="grid grid-cols-5 gap-2 mb-6">
-                  {Object.keys(pricingData).map(k => (
-                    <button key={k} onClick={() => setEventType(k)} className={`p-2 rounded-lg border-2 text-center ${eventType === k ? 'border-amber-500 bg-amber-50' : 'border-gray-100'}`}>
-                      <div className="text-xl">{pricingData[k].icon}</div>
-                      <div className="text-[10px] font-bold">{pricingData[k].name.split(' - ')[0]}</div>
+              {/* INPUT */}
+              <div className="bg-white rounded-xl shadow-lg p-5">
+                <h2 className="text-xl font-bold text-amber-800 mb-4">פרטי האירוע</h2>
+
+                {/* Event Type Cards */}
+                <div className="grid grid-cols-5 gap-2 mb-5">
+                  {eventTypes.map(et => (
+                    <button key={et.key} onClick={() => setEventType(et.key)}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 transition-all cursor-pointer
+                        ${eventType === et.key ? 'bg-amber-100 border-amber-500 shadow-md scale-105' : 'bg-amber-50 border-amber-200 hover:border-amber-400'}`}>
+                      <span className="text-2xl mb-1">{et.icon}</span>
+                      <span className={`text-xs font-bold ${eventType === et.key ? 'text-amber-800' : 'text-gray-600'}`}>{et.label}</span>
                     </button>
                   ))}
                 </div>
 
-                <div className="space-y-4">
+                {/* Adults & Children */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   {config.ADT && (
                     <div>
-                      <label className="text-sm font-bold block mb-1">מבוגרים: {params.ADT}</label>
-                      <input type="range" min={config.ADT.min} max={config.ADT.max} value={params.ADT} onChange={e => setParams({...params, ADT: parseInt(e.target.value)})} className="w-full accent-amber-600" />
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">מבוגרים ({config.ADT.min}-{config.ADT.max})</label>
+                      <input type="range" min={config.ADT.min} max={config.ADT.max} value={params.ADT || config.ADT.default}
+                        onChange={(e) => setParams({...params, ADT: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-xl font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.ADT || config.ADT.default}</div>
                     </div>
                   )}
                   {config.CHD && (
                     <div>
-                      <label className="text-sm font-bold block mb-1">ילדים: {params.CHD}</label>
-                      <input type="range" min={config.CHD.min} max={config.CHD.max} value={params.CHD} onChange={e => setParams({...params, CHD: parseInt(e.target.value)})} className="w-full accent-amber-600" />
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">ילדים ({config.CHD.min}-{config.CHD.max})</label>
+                      <input type="range" min={config.CHD.min} max={config.CHD.max} value={params.CHD || config.CHD.default}
+                        onChange={(e) => setParams({...params, CHD: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-xl font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.CHD || config.CHD.default}</div>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-2">
-                    {config.FOD && <Toggle label="אוכל" included={config.FOD === 'כלול'} checked={params.FOD === 'כן'} onChange={e => setParams({...params, FOD: e.target.checked ? 'כן' : 'לא'})} />}
-                    {config.KSH && <Toggle label="כשרות רב" checked={params.KSH === 'כן'} onChange={e => setParams({...params, KSH: e.target.checked ? 'כן' : 'לא'})} />}
-                    {config.CER && <Toggle label="קרמיקה" checked={params.CER === 'כן'} onChange={e => setParams({...params, CER: e.target.checked ? 'כן' : 'לא'})} />}
-                    {config.WINP && <Toggle label="יין פרימיום" checked={params.WINP === 'כן'} onChange={e => setParams({...params, WINP: e.target.checked ? 'כן' : 'לא'})} />}
-                  </div>
+                </div>
+
+                {/* Food + Kashrut */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.FOD && <Toggle label="אוכל" included={config.FOD === 'כלול'} checked={params.FOD === 'כן'} onChange={(e) => setParams({...params, FOD: e.target.checked ? 'כן' : 'לא'})} />}
+                  {config.KSH && <Toggle label="הכשרת רב" checked={params.KSH === 'כן'} onChange={(e) => setParams({...params, KSH: e.target.checked ? 'כן' : 'לא'})} />}
+                </div>
+
+                {/* Cork + Ceramics */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.CRK && <Toggle label="דמי חליצה" checked={params.CRK === 'כן'} onChange={(e) => setParams({...params, CRK: e.target.checked ? 'כן' : 'לא'})} />}
+                  {config.CER && <Toggle label="סדנת קרמיקה" checked={params.CER === 'כן'} onChange={(e) => setParams({...params, CER: e.target.checked ? 'כן' : 'לא'})} />}
+                </div>
+
+                {/* Flowers + Wine */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.FLW && <Toggle label="פרחים" included={config.FLW === 'כלול'} checked={params.FLW === 'כן'} onChange={(e) => setParams({...params, FLW: e.target.checked ? 'כן' : 'לא'})} />}
+                  {config.WIN && <Toggle label="יין" included={config.WIN === 'כלול'} checked={params.WIN === 'כן'} onChange={(e) => setParams({...params, WIN: e.target.checked ? 'כן' : 'לא'})} />}
+                </div>
+
+                {/* Protein + Premium Wine */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.PRO && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">מנות חלבון</label>
+                      <div className="flex gap-3 bg-amber-50 p-2 rounded-lg border-2 border-amber-200">
+                        {config.PRO.map(num => (
+                          <label key={num} className="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="protein" value={num} checked={(params.PRO || 0) === num}
+                              onChange={() => setParams({...params, PRO: num})} className="accent-amber-600 w-4 h-4" />
+                            <span className="text-gray-700 font-semibold text-sm">{num}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {config.WINP && (
+                    <div className="flex items-end"><div className="w-full">
+                      <Toggle label="יין פרימיום" checked={params.WINP === 'כן'} onChange={(e) => setParams({...params, WINP: e.target.checked ? 'כן' : 'לא'})} />
+                    </div></div>
+                  )}
+                </div>
+
+                {/* Kitchen + Waiters */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.KIT && (
+                    <div className="flex items-end"><div className="w-full">
+                      <Toggle label="שימוש במטבח" checked={params.KIT === 'כן'} onChange={(e) => setParams({...params, KIT: e.target.checked ? 'כן' : 'לא'})} />
+                    </div></div>
+                  )}
+                  {config.WTR && (
+                    <div>
+                      {config.WTR === 'calc' ? (
+                        <div className="bg-amber-50 px-3 py-2 rounded-lg border-2 border-amber-200 flex items-center justify-between">
+                          <span className="text-gray-700 font-semibold text-sm">מלצרים</span>
+                          <span className="text-amber-700 font-bold">{calculateWaiters()}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <label className="block text-gray-700 font-semibold mb-1 text-sm">מלצרים</label>
+                          <select value={params.WTR || 0} onChange={(e) => setParams({...params, WTR: parseInt(e.target.value)})}
+                            className="w-full p-2 border-2 border-amber-300 rounded-lg bg-amber-50 text-sm">
+                            {config.WTR.map(num => <option key={num} value={num}>{num}</option>)}
+                          </select>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Discount & Tip */}
+                <div className="grid grid-cols-2 gap-4 mb-2">
+                  {config.DSC && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">הנחה ({config.DSC.min}%-{config.DSC.max}%)</label>
+                      <input type="range" min={config.DSC.min} max={config.DSC.max} value={params.DSC || config.DSC.default}
+                        onChange={(e) => setParams({...params, DSC: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-lg font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.DSC || config.DSC.default}%</div>
+                    </div>
+                  )}
+                  {config.TIP && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">טיפ ({config.TIP.min}%-{config.TIP.max}%)</label>
+                      <input type="range" min={config.TIP.min} max={config.TIP.max} value={params.TIP !== undefined ? params.TIP : config.TIP.default}
+                        onChange={(e) => setParams({...params, TIP: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-lg font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.TIP !== undefined ? params.TIP : config.TIP.default}%</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className="bg-white rounded-xl shadow p-5 flex flex-col">
-                <div className="flex-1 space-y-3">
-                   <div className="flex justify-between text-xl font-black border-b pb-2">
-                     <span>סה"כ לתשלום</span>
-                     <span className="text-green-600">{fmt(calc.finalTotal)} ₪</span>
-                   </div>
-                   <div className="text-sm space-y-1 opacity-80">
-                     <div className="flex justify-between"><span>לפני מע"מ</span><span>{fmt(calc.REV)} ₪</span></div>
-                     <div className="flex justify-between"><span>מע"מ</span><span>{fmt(calc.vat)} ₪</span></div>
-                     <div className="flex justify-between"><span>טיפ ({params.TIP}%)</span><span>{fmt(calc.tip)} ₪</span></div>
-                   </div>
+              {/* PRICING SUMMARY */}
+              <div className="bg-white rounded-xl shadow-lg p-5">
+                <h2 className="text-xl font-bold text-amber-800 mb-4">סיכום תמחור</h2>
+
+                <div className="grid grid-cols-2 gap-4 mb-5">
+                  <div className="bg-green-50 rounded-lg p-3 border-2 border-green-200">
+                    <h3 className="font-bold text-green-800 mb-3 text-base">הכנסות</h3>
+                    <div className="space-y-1.5">
+                      {calc.income.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-xs gap-1">
+                          <span className="text-gray-700">{item.label}</span>
+                          <span className="text-green-700 font-semibold whitespace-nowrap">{fmt(item.amount)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t-2 border-green-300 pt-2 mt-2">
+                        <div className="flex justify-between font-bold text-sm">
+                          <span>סה"כ</span>
+                          <span className="text-green-700">{fmt(calc.income.reduce((s, i) => s + i.amount, 0))} ש"ח</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-red-50 rounded-lg p-3 border-2 border-red-200">
+                    <h3 className="font-bold text-red-800 mb-3 text-base">הוצאות</h3>
+                    <div className="space-y-1.5">
+                      {calc.outcome.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-xs gap-1">
+                          <span className="text-gray-700">{item.label}</span>
+                          <span className="text-red-700 font-semibold whitespace-nowrap" dir="ltr">-{fmt(Math.abs(item.amount))}</span>
+                        </div>
+                      ))}
+                      <div className="border-t-2 border-red-300 pt-2 mt-2">
+                        <div className="flex justify-between font-bold text-sm">
+                          <span>סה"כ</span>
+                          <span className="text-red-700" dir="ltr">-{fmt(Math.abs(calc.COG))} ש"ח</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-6 space-y-2">
-                  <button onClick={handleCopyWhatsApp} className="w-full bg-green-500 text-white font-bold py-3 rounded-xl">{copied ? '✅ הועתק' : '📱 העתק לווטסאפ'}</button>
-                  <button onClick={handleSaveFile} className="w-full bg-amber-500 text-white font-bold py-3 rounded-xl">
-                    {mondayStatus === 'uploading' ? '⏳ מעלה...' : (mondayItemId ? '📤 שלח למונדיי' : '🖼️ שמור כתמונה')}
-                  </button>
-                  <button onClick={handleGeneratePDF} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">📄 הדפס PDF</button>
+                {/* Final Summary */}
+                <div className="bg-amber-50 rounded-xl p-5 border-2 border-amber-300 space-y-2.5">
+                  {calc.childrenDiscount < 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-semibold">הנחה לילדים ({params.CHD})</span>
+                      <span className="text-red-600 font-bold" dir="ltr">-{fmt(Math.abs(calc.childrenDiscount))} ש"ח</span>
+                    </div>
+                  )}
+                  {calc.percentageDiscount < 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-semibold">הנחה ({params.DSC}%)</span>
+                      <span className="text-red-600 font-bold" dir="ltr">-{fmt(Math.abs(calc.percentageDiscount))} ש"ח</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t-2 border-amber-400 pt-2">
+                    <span className="font-semibold">סה"כ לפני מע"מ</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.REV)} ש"ח</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">מע"מ (18%)</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.vat)} ש"ח</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">טיפ ({params.TIP}%)</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.tip)} ש"ח</span>
+                  </div>
+                  <div className="flex justify-between text-xl border-t-4 border-amber-500 pt-3 mt-2">
+                    <span className="font-bold">סה"כ לתשלום</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.finalTotal)} ש"ח</span>
+                  </div>
+                </div>
+
+                {/* WhatsApp */}
+                <button onClick={handleCopyWhatsApp}
+                  className={`w-full mt-5 font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all text-lg ${copied ? 'bg-green-600 text-white scale-95' : 'bg-green-500 hover:bg-green-600 text-white hover:shadow-xl'}`}>
+                  {copied ? '✅ הועתק! הדבק בווטסאפ' : '📱 העתק הצעת מחיר לווטסאפ'}
+                </button>
+
+                {/* Save / Send to Monday */}
+                <button onClick={handleSaveFile}
+                  className={`w-full mt-2 font-bold py-3 px-6 rounded-xl shadow-lg transition-all text-base ${
+                    mondayStatus === 'uploading' ? 'bg-blue-400 text-white cursor-wait opacity-70' :
+                    mondayStatus === 'success' ? 'bg-green-600 text-white scale-95' :
+                    mondayStatus === 'error' ? 'bg-red-500 text-white' :
+                    saved ? 'bg-amber-600 text-white scale-95' :
+                    'bg-amber-500 hover:bg-amber-600 text-white hover:shadow-xl'
+                  }`}>
+                  {mondayStatus === 'uploading' ? '⏳ שולח ל-Monday...' :
+                   mondayStatus === 'success' ? '✅ נשלח ל-Monday!' :
+                   mondayStatus === 'error' ? '❌ שגיאה בשליחה – נסה שוב' :
+                   saved ? '✅ הקובץ נשמר!' :
+                   mondayItemId ? '📤 שלח הצעת מחיר ל-Monday' : '🖼️ שמור הצעת מחיר כתמונה'}
+                </button>
+
+                {/* PDF */}
+                <button onClick={handleGeneratePDF} disabled={pdfLoading}
+                  className={`w-full mt-2 font-bold py-3 px-6 rounded-xl shadow-lg transition-all text-base ${pdfLoading ? 'bg-blue-400 text-white cursor-wait opacity-70' : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl'}`}>
+                  {pdfLoading ? '⏳ מכין קובץ...' : '📄 צור הצעת מחיר ב-PDF'}
+                </button>
+
+                <button onClick={() => setShowPreview(!showPreview)} className="w-full mt-2 text-sm text-amber-700 hover:text-amber-900 underline">
+                  {showPreview ? 'הסתר תצוגה מקדימה' : 'הצג תצוגה מקדימה של ההודעה'}
+                </button>
+
+                {showPreview && (
+                  <div className="mt-3 bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                    <pre className="whitespace-pre-wrap text-gray-800 text-xs leading-relaxed" style={{ fontFamily: 'system-ui, sans-serif' }}>
+                      {generateWhatsAppMessage()}
+                    </pre>
+                  </div>
+                )}
+
+                <div className="mt-3 flex justify-between items-center text-sm text-gray-500 px-1">
+                  <span>רווח גולמי</span>
+                  <span className={`font-semibold ${calc.GDP >= 0 ? 'text-green-600' : 'text-red-600'}`} dir="ltr">
+                    {calc.GDP < 0 ? '-' : ''}{fmt(Math.abs(calc.GDP))} ש"ח
+                    <span className="mr-1 opacity-75">({calc.REV > 0 ? Math.round((calc.GDP / calc.REV) * 100) : 0}%)</span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -566,7 +970,8 @@
       );
     };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<HVLPricingApp />);
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<HVLPricingApp />);
   </script>
 </body>
 </html>
