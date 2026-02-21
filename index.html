@@ -1,372 +1,977 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>חובות הלבבות - מחשבון תמחור</title>
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&family=Heebo:wght@300;400;500;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>מערכת תמחור – חובות הלבבות</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Heebo', system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const HVLPricingApp = () => {
+      const defaultPricingData = {
+        PRM: {
+          name: 'PRM - פרימיום', icon: '✨',
+          ADT: { min: 15, max: 80, default: 15 },
+          CHD: { min: 0, max: 20, default: 0 },
+          FOD: 'כלול', KSH: ['לא', 'כן'], WTR: 'calc', PRO: [0, 1, 2],
+          CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: 'כלול', WIN: 'כלול',
+          WINP: ['לא', 'כן'], KIT: null,
+          DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
+          IBASE: 9900, IMORE: 550, ICRK: 1000, IPRO: 75,
+          OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
+          ICER: 350, OCER: 175, IWINP: 60, OWINP: 10,
+          IKIT: null, OKIT: null,
+          IFLW: 'כלול', OFLW: 800, IWIN: 'כלול', OWIN: 20,
+          IKSH: 1500, OKSH: 1000,
+          OCHEFB: 2100, OCHEF1: 40, OCHEF2: null,
+          OFOD: 70, OCLEAN: 500, OEVM: 700, OWTR: 400, OOVH: 750
+        },
+        OFS: {
+          name: 'OFS - אופסייט', icon: '🏕️',
+          ADT: { min: 10, max: 70, default: 10 }, CHD: null,
+          FOD: ['לא', 'כן'], KSH: ['לא', 'כן'], WTR: [0, 1, 2], PRO: [0, 1, 2],
+          CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: ['לא', 'כן'], WIN: ['לא', 'כן'],
+          WINP: null, KIT: ['לא', 'כן'],
+          DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
+          IBASE: 5500, IMORE: 500, ICRK: 1000, IPRO: 75,
+          OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
+          ICER: 350, OCER: 175, IWINP: null, OWINP: null,
+          IKIT: 150, OKIT: 0,
+          IFLW: 1200, OFLW: 800, IWIN: 70, OWIN: 20,
+          IKSH: 1500, OKSH: 1000,
+          OCHEFB: 1200, OCHEF1: null, OCHEF2: 30,
+          OFOD: 70, OCLEAN: 500, OEVM: 700, OWTR: 400, OOVH: 750
+        },
+        CKT: {
+          name: 'CKT - קוקטלים', icon: '🍸',
+          ADT: { min: 15, max: 80, default: 15 },
+          CHD: { min: 0, max: 20, default: 0 },
+          FOD: 'כלול', KSH: ['לא', 'כן'], WTR: 'calc', PRO: [0, 1, 2],
+          CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: 'כלול', WIN: 'כלול',
+          WINP: ['לא', 'כן'], KIT: null,
+          DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
+          IBASE: 7050, IMORE: 470, ICRK: 1000, IPRO: 75,
+          OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
+          ICER: 350, OCER: 175, IWINP: 60, OWINP: 10,
+          IKIT: null, OKIT: null,
+          IFLW: 'כלול', OFLW: 800, IWIN: 'כלול', OWIN: 20,
+          IKSH: 1500, OKSH: 1000,
+          OCHEFB: 1400, OCHEF1: 40, OCHEF2: null,
+          OFOD: 55, OCLEAN: 500, OEVM: 700, OWTR: 400, OOVH: 750
+        },
+        BRC: {
+          name: "BRC - בראנץ'", icon: '🥐',
+          ADT: { min: 15, max: 80, default: 15 },
+          CHD: { min: 0, max: 20, default: 0 },
+          FOD: 'כלול', KSH: ['לא', 'כן'], WTR: 'calc', PRO: [0, 1, 2],
+          CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: 'כלול', WIN: 'כלול',
+          WINP: ['לא', 'כן'], KIT: null,
+          DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
+          IBASE: 8250, IMORE: 500, ICRK: 1000, IPRO: 75,
+          OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
+          ICER: 350, OCER: 175, IWINP: 60, OWINP: 10,
+          IKIT: null, OKIT: null,
+          IFLW: 1200, OFLW: 800, IWIN: 'כלול', OWIN: 20,
+          IKSH: 1500, OKSH: 1000,
+          OCHEFB: 1400, OCHEF1: 40, OCHEF2: null,
+          OFOD: 70, OCLEAN: 500, OEVM: 700, OWTR: 400, OOVH: 750
+        },
+        RNT: {
+          name: 'RNT - השכרת חלל', icon: '🏛️',
+          ADT: { min: 15, max: 80, default: 15 },
+          CHD: { min: 0, max: 20, default: 0 },
+          FOD: null, KSH: null, WTR: [0, 1, 2], PRO: [0, 1, 2],
+          CRK: null, CER: null, FLW: ['לא', 'כן'], WIN: ['לא', 'כן'],
+          WINP: null, KIT: ['לא', 'כן'],
+          DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
+          IBASE: 5500, IMORE_per10: 1000,
+          ICRK: null, IPRO: 75,
+          OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
+          ICER: null, OCER: null, IWINP: null, OWINP: null,
+          IKIT: 1000, OKIT: 0,
+          IFLW: 1200, OFLW: 800, IWIN: 70, OWIN: 20,
+          IKSH: null, OKSH: null,
+          OCHEFB: null, OCHEF1: null, OCHEF2: null,
+          OFOD: null, OCLEAN: 500, OEVM: 700, OWTR: 400, OOVH: null
+        }
+      };
+
+      const [pricingData] = useState(defaultPricingData);
+      const [eventType, setEventType] = useState('PRM');
+      const [params, setParams] = useState({});
+
+      // ========== MONDAY INTEGRATION ==========
+      const urlParams = new URLSearchParams(window.location.search);
+      const mondayItemId = urlParams.get('itemId');
+      const mondayBoardId = urlParams.get('boardId');
+
+      const [copied, setCopied] = useState(false);
+      const [showPreview, setShowPreview] = useState(false);
+      const [pdfLoading, setPdfLoading] = useState(false);
+
+      useEffect(() => {
+        const config = pricingData[eventType];
+        setParams({
+          ADT: config.ADT ? config.ADT.default : 0,
+          CHD: config.CHD ? config.CHD.default : 0,
+          FOD: config.FOD === 'כלול' ? 'כן' : (Array.isArray(config.FOD) ? config.FOD[0] : null),
+          KSH: Array.isArray(config.KSH) ? config.KSH[0] : null,
+          WTR: 0,
+          PRO: Array.isArray(config.PRO) ? config.PRO[0] : 0,
+          CRK: Array.isArray(config.CRK) ? config.CRK[0] : null,
+          CER: Array.isArray(config.CER) ? config.CER[0] : null,
+          FLW: config.FLW === 'כלול' ? 'כן' : (Array.isArray(config.FLW) ? config.FLW[0] : null),
+          WIN: config.WIN === 'כלול' ? 'כן' : (Array.isArray(config.WIN) ? config.WIN[0] : null),
+          WINP: Array.isArray(config.WINP) ? config.WINP[0] : null,
+          KIT: Array.isArray(config.KIT) ? config.KIT[0] : null,
+          DSC: config.DSC ? config.DSC.default : 0,
+          TIP: config.TIP ? config.TIP.default : 15
+        });
+      }, [eventType]);
+
+      const calculateWaiters = () => {
+        const config = pricingData[eventType];
+        const totalGuests = (params.ADT || 0) + (params.CHD || 0);
+        if (config.WTR === 'calc') return Math.ceil(totalGuests / 20);
+        if (Array.isArray(config.WTR)) return params.WTR || 0;
+        return 0;
+      };
+
+      const calculatePricing = () => {
+        const config = pricingData[eventType];
+        const totalGuests = (params.ADT || 0) + (params.CHD || 0);
+        const adults = params.ADT || 0;
+        const children = params.CHD || 0;
+        let income = [], outcome = [];
+
+        income.push({ label: 'חבילת בסיס (עד 15 אנשים)', amount: config.IBASE });
+
+        if (eventType === 'RNT' && config.IMORE_per10) {
+          const extra = Math.max(0, totalGuests - 15);
+          const groups = Math.ceil(extra / 10);
+          if (groups > 0) income.push({ label: `תוספת אורחים (${groups * 10} אנשים)`, amount: groups * config.IMORE_per10 });
+        } else if (config.IMORE && totalGuests > 15) {
+          const extra = totalGuests - 15;
+          income.push({ label: `תוספת אורחים (${extra} × ${config.IMORE} ש"ח)`, amount: extra * config.IMORE });
+        }
+
+        if (params.CRK === 'כן' && config.ICRK) income.push({ label: 'דמי חליצה', amount: config.ICRK });
+
+        if (eventType === 'OFS' && params.FOD === 'כן') {
+          income.push({ label: `אוכל (${totalGuests} × 500 ש"ח)`, amount: totalGuests * 500 });
+        }
+
+        if (params.PRO > 0 && config.IPRO) {
+          income.push({ label: `תוספת ${params.PRO} מנות חלבון (${totalGuests} × ${params.PRO} × ${config.IPRO} ש"ח)`, amount: params.PRO * totalGuests * config.IPRO });
+          const first15 = Math.min(totalGuests, 15), over15 = Math.max(0, totalGuests - 15);
+          outcome.push({ label: `עלות חלבון - חומר גלם`, amount: -(params.PRO * ((first15 * config.OPRO1_15) + (over15 * config.OPRO1_over))) });
+          outcome.push({ label: `עלות חלבון - מועבר לשף`, amount: -(params.PRO * totalGuests * config.OPRO2) });
+        }
+
+        if (params.CER === 'כן' && config.ICER) {
+          income.push({ label: `סדנת קרמיקה (${totalGuests} × ${config.ICER} ש"ח)`, amount: totalGuests * config.ICER });
+          outcome.push({ label: `עלות סדנת קרמיקה`, amount: -totalGuests * config.OCER });
+        }
+
+        if (params.WINP === 'כן' && config.IWINP) {
+          income.push({ label: `תוספת יין פרימיום (${adults} × ${config.IWINP} ש"ח)`, amount: adults * config.IWINP });
+          outcome.push({ label: `עלות יין פרימיום`, amount: -adults * config.OWINP });
+        }
+
+        if (params.KIT === 'כן' && config.IKIT) income.push({ label: 'שימוש במטבח', amount: config.IKIT });
+
+        if (config.IFLW !== 'כלול' && params.FLW === 'כן' && config.IFLW) income.push({ label: 'פרחים', amount: config.IFLW });
+        if (params.FLW === 'כן' || config.FLW === 'כלול') outcome.push({ label: 'עלות פרחים', amount: -config.OFLW });
+
+        if (config.WIN !== 'כלול' && config.IWIN !== 'כלול' && params.WIN === 'כן' && config.IWIN) income.push({ label: `יין (${adults} × ${config.IWIN} ש"ח)`, amount: adults * config.IWIN });
+        if (params.WIN === 'כן' || config.WIN === 'כלול') outcome.push({ label: `עלות יין`, amount: -adults * config.OWIN });
+
+        if (params.KSH === 'כן' && config.IKSH) {
+          income.push({ label: 'הכשרת רב', amount: config.IKSH });
+          outcome.push({ label: 'עלות הכשרת רב', amount: -config.OKSH });
+        }
+
+        if (config.OCHEFB) {
+          outcome.push({ label: 'שף בסיס', amount: -config.OCHEFB });
+          if (config.OCHEF1 && totalGuests > 35) outcome.push({ label: `שף תוספת`, amount: -(totalGuests - 35) * config.OCHEF1 });
+          if (config.OCHEF2 && totalGuests > 10) outcome.push({ label: `שף תוספת`, amount: -(totalGuests - 10) * config.OCHEF2 });
+        }
+
+        const cookDiv = eventType === 'PRM' ? 20 : 28;
+        const cooks = Math.floor(totalGuests / cookDiv);
+        if (cooks > 0 && config.OFOD !== null) outcome.push({ label: `טבח נוסף (${cooks})`, amount: -cooks * 500 });
+
+        if (config.OFOD && (params.FOD === 'כן' || config.FOD === 'כלול')) outcome.push({ label: `עלות אוכל`, amount: -totalGuests * config.OFOD });
+
+        if (config.OCLEAN) outcome.push({ label: 'נקיון', amount: -config.OCLEAN });
+        if (config.OEVM) outcome.push({ label: 'מנהל אירוע', amount: -config.OEVM });
+
+        const waiters = calculateWaiters();
+        if (waiters > 0 && config.OWTR) outcome.push({ label: `מלצרים (${waiters})`, amount: -waiters * config.OWTR });
+        if (config.OOVH) outcome.push({ label: 'תקורה קבועה', amount: -config.OOVH });
+
+        const totalIncome = income.reduce((s, i) => s + i.amount, 0);
+        let childrenDiscount = children > 0 ? -children * 100 : 0;
+        let percentageDiscount = params.DSC > 0 ? -(totalIncome * params.DSC / 100) : 0;
+        const REV = totalIncome + childrenDiscount + percentageDiscount;
+        const salesBonus = -REV * 0.03;
+        outcome.push({ label: 'בונוס מנהל מכירות (3%)', amount: salesBonus });
+        const totalOutcome = outcome.reduce((s, i) => s + i.amount, 0);
+        const COG = totalOutcome;
+        const GDP = REV + COG;
+        const vat = REV * 0.18;
+        const tip = (REV + vat) * (params.TIP / 100);
+        const finalTotal = REV + vat + tip;
+
+        return { income, outcome, childrenDiscount, percentageDiscount, REV, COG, GDP, vat, tip, finalTotal };
+      };
+
+      const fmt = (num) => Math.round(num).toLocaleString('he-IL');
+      const R = '\u200F';
+      const fmtR = (num) => `${R}${Math.round(num).toLocaleString('he-IL')}`;
+      const boldHebrew = (text) => `*${text}*`;
+
+      const generateWhatsAppMessage = () => {
+        const calc = calculatePricing();
+        const config = pricingData[eventType];
+        const totalGuests = (params.ADT || 0) + (params.CHD || 0);
+        const adults = params.ADT || 0;
+        const children = params.CHD || 0;
+        const eventNames = { PRM: 'פרימיום', OFS: 'אופסייט', CKT: 'קוקטלים', BRC: "בראנץ'", RNT: 'השכרת חלל' };
+
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yy = String(now.getFullYear()).slice(-2);
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const quoteNum = `${dd}${mm}${yy}-${hh}${min}`;
+
+        let m = '';
+        m += `${R}${boldHebrew('הצעת מחיר חובות הלבבות')} 🌿\n`;
+        m += `${R}הצעה מספר: ${R}${quoteNum}\n`;
+        m += `─────────────────────\n\n`;
+        m += `${R}${boldHebrew('פרטי האירוע')} 📋\n`;
+        m += `${R}סוג: ${eventNames[eventType]}\n`;
+        m += `${R}מבוגרים: ${R}${adults}`;
+        if (children > 0) m += ` | ילדים: ${R}${children}`;
+        m += `\n${R}סה"כ משתתפים: ${R}${totalGuests}\n`;
+
+        const included = [];
+        if (config.FOD === 'כלול') included.push('אוכל 🍽️');
+        if (config.FLW === 'כלול') included.push('פרחים 💐');
+        if (config.WIN === 'כלול') included.push('יין 🍷');
+        if (included.length > 0) m += `\n${R}${boldHebrew('כלול בחבילה:')} ${included.join(', ')}\n`;
+
+        const extras = [];
+        if (params.KSH === 'כן') extras.push('כשרות רב');
+        if (params.CRK === 'כן') extras.push('דמי חליצה');
+        if (params.CER === 'כן') extras.push('סדנת קרמיקה 🎨');
+        if (config.FLW !== 'כלול' && params.FLW === 'כן') extras.push('פרחים 💐');
+        if (config.WIN !== 'כלול' && params.WIN === 'כן') extras.push('יין 🍷');
+        if (params.WINP === 'כן') extras.push('יין פרימיום 🥂');
+        if (params.KIT === 'כן') extras.push('שימוש במטבח');
+        if (config.FOD !== 'כלול' && params.FOD === 'כן') extras.push('אוכל 🍽️');
+        if ((params.PRO || 0) > 0) extras.push(`${R}${params.PRO} מנות חלבון לאדם 🥩`);
+        if (extras.length > 0) {
+          m += `\n${R}${boldHebrew('תוספות:')} ✅\n`;
+          extras.forEach(e => { m += `${R}• ${e}\n`; });
+        }
+
+        m += `\n─────────────────────\n`;
+        m += `${R}${boldHebrew('פירוט עלויות')} 💰\n\n`;
+        calc.income.forEach(item => { m += `${R}${item.label}: ${fmtR(item.amount)} ש"ח\n`; });
+        if (calc.childrenDiscount < 0) m += `${R}הנחה לילדים (${R}${children} x ${R}100): ${fmtR(calc.childrenDiscount)} ש"ח\n`;
+        if (calc.percentageDiscount < 0) m += `${R}הנחה ${R}${params.DSC}%: ${fmtR(calc.percentageDiscount)} ש"ח\n`;
+
+        m += `\n─────────────────────\n`;
+        m += `${R}סכום לפני מע"מ: ${fmtR(calc.REV)} ש"ח\n`;
+        m += `${R}מע"מ ${R}18%: ${fmtR(calc.vat)} ש"ח\n`;
+        if ((params.TIP || 0) > 0) m += `${R}טיפ ${R}${params.TIP}%: ${fmtR(calc.tip)} ש"ח\n`;
+        m += `\n${R}${boldHebrew('סה"כ לתשלום:')} ${fmtR(calc.finalTotal)} ש"ח ✨\n\n`;
+        m += `${R}נשמח לארח אתכם! 🤍\n${R}חובות הלבבות 🌿`;
+        return m;
+      };
+
+      const generateHTMLQuote = (forPdf = false) => {
+        const calc = calculatePricing();
+        const config = pricingData[eventType];
+        const totalGuests = (params.ADT || 0) + (params.CHD || 0);
+        const adults = params.ADT || 0;
+        const children = params.CHD || 0;
+        const eventNames = { PRM: 'פרימיום', OFS: 'אופסייט', CKT: 'קוקטלים', BRC: "בראנץ'", RNT: 'השכרת חלל' };
+
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yy = String(now.getFullYear()).slice(-2);
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const quoteNum = `${dd}${mm}${yy}-${hh}${min}`;
+        const fmtH = (num) => Math.round(num).toLocaleString('he-IL');
+
+        const included = [];
+        if (config.FOD === 'כלול') included.push('אוכל');
+        if (config.FLW === 'כלול') included.push('פרחים');
+        if (config.WIN === 'כלול') included.push('יין');
+
+        const extras = [];
+        if (params.KSH === 'כן') extras.push('כשרות רב');
+        if (params.CRK === 'כן') extras.push('דמי חליצה');
+        if (params.CER === 'כן') extras.push('סדנת קרמיקה');
+        if (config.FLW !== 'כלול' && params.FLW === 'כן') extras.push('פרחים');
+        if (config.WIN !== 'כלול' && params.WIN === 'כן') extras.push('יין');
+        if (params.WINP === 'כן') extras.push('יין פרימיום');
+        if (params.KIT === 'כן') extras.push('שימוש במטבח');
+        if (config.FOD !== 'כלול' && params.FOD === 'כן') extras.push('אוכל');
+        if ((params.PRO || 0) > 0) extras.push(`${params.PRO} מנות חלבון לאדם`);
+
+        let incomeRows = '';
+        calc.income.forEach((item, idx) => {
+          const bg = idx % 2 === 0 ? 'background:rgba(255,255,255,0.06);' : '';
+          incomeRows += `<tr style="${bg}"><td style="padding:11px 20px;color:#e8edf5;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.08);">${item.label}</td><td style="padding:11px 20px;text-align:left;white-space:nowrap;color:#fff;font-weight:700;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.08);direction:ltr;">${fmtH(item.amount)} ₪</td></tr>`;
+        });
+        if (calc.childrenDiscount < 0) {
+          incomeRows += `<tr style="background:rgba(255,100,100,0.1);"><td style="padding:11px 20px;color:#ffb3b3;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.08);">הנחה לילדים (${children})</td><td style="padding:11px 20px;text-align:left;color:#ffb3b3;font-weight:700;font-size:14px;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,0.08);direction:ltr;">${fmtH(calc.childrenDiscount)} ₪</td></tr>`;
+        }
+        if (calc.percentageDiscount < 0) {
+          incomeRows += `<tr style="background:rgba(255,100,100,0.1);"><td style="padding:11px 20px;color:#ffb3b3;font-size:14px;border-bottom:1px solid rgba(255,255,255,0.08);">הנחה ${params.DSC}%</td><td style="padding:11px 20px;text-align:left;color:#ffb3b3;font-weight:700;font-size:14px;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,0.08);direction:ltr;">${fmtH(calc.percentageDiscount)} ₪</td></tr>`;
+        }
+
+        let detailRows = '';
+        detailRows += `<tr><td style="padding:10px 20px;color:rgba(255,255,255,0.7);font-size:13px;border-bottom:1px solid rgba(255,255,255,0.08);width:140px;">סוג אירוע</td><td style="padding:10px 20px;color:#fff;font-weight:700;font-size:15px;border-bottom:1px solid rgba(255,255,255,0.08);">${eventNames[eventType]}</td></tr>`;
+        detailRows += `<tr><td style="padding:10px 20px;color:rgba(255,255,255,0.7);font-size:13px;border-bottom:1px solid rgba(255,255,255,0.08);">מבוגרים</td><td style="padding:10px 20px;color:#fff;font-weight:700;font-size:15px;border-bottom:1px solid rgba(255,255,255,0.08);">${adults}</td></tr>`;
+        if (children > 0) {
+          detailRows += `<tr><td style="padding:10px 20px;color:rgba(255,255,255,0.7);font-size:13px;border-bottom:1px solid rgba(255,255,255,0.08);">ילדים</td><td style="padding:10px 20px;color:#fff;font-weight:700;font-size:15px;border-bottom:1px solid rgba(255,255,255,0.08);">${children}</td></tr>`;
+        }
+        detailRows += `<tr><td style="padding:10px 20px;color:rgba(255,255,255,0.7);font-size:13px;">סה"כ משתתפים</td><td style="padding:10px 20px;color:#fff;font-weight:700;font-size:15px;">${totalGuests}</td></tr>`;
+
+        const printStyles = forPdf ? `
+        @media print {
+          body { padding:0; margin:0; }
+          .page { box-shadow:none; border-radius:0; max-width:100%; }
+        }
+        @page { size:A4; margin:10mm; }` : '';
+
+        return `<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+<meta charset="UTF-8">
+<title>הצעת מחיר ${quoteNum} - חובות הלבבות</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Assistant','Heebo',sans-serif;direction:rtl}
-input[type=range]{cursor:pointer;height:18px}
-select{cursor:pointer}
+  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Heebo',sans-serif; background:#2c4d8a; color:#fff; padding:0; direction:rtl; }
+  .page { max-width:680px; margin:0 auto; background:#3558A0; min-height:100vh; }
+  .header { padding:44px 36px 28px; border-bottom:1px solid rgba(255,255,255,0.12); }
+  .header h1 { font-size:22px; font-weight:800; color:#fff; margin-bottom:4px; }
+  .header .sub { font-size:14px; color:rgba(255,255,255,0.6); font-weight:300; }
+  .section { padding:0 36px; }
+  .section-title { font-size:14px; font-weight:700; color:#C8A84E; margin:28px 0 14px; padding-bottom:8px; border-bottom:1px solid rgba(200,168,78,0.3); letter-spacing:0.3px; }
+  .detail-table { width:100%; border-collapse:collapse; background:rgba(255,255,255,0.04); border-radius:8px; overflow:hidden; }
+  .pricing-table { width:100%; border-collapse:collapse; }
+  .summary-box { background:rgba(0,0,0,0.15); border-radius:10px; padding:20px 24px; margin:24px 36px; }
+  .summary-row { display:flex; justify-content:space-between; padding:7px 0; font-size:14px; color:rgba(255,255,255,0.85); }
+  .summary-row .val { font-weight:700; color:#fff; direction:ltr; unicode-bidi:embed; }
+  .summary-row.total { font-size:20px; font-weight:800; color:#C8A84E; border-top:2px solid rgba(200,168,78,0.35); padding-top:14px; margin-top:8px; }
+  .summary-row.total .val { color:#C8A84E; }
+  .footer { text-align:center; padding:28px 36px; color:rgba(255,255,255,0.5); font-size:12px; font-weight:300; border-top:1px solid rgba(255,255,255,0.08); margin-top:20px; }
+  .footer strong { color:rgba(255,255,255,0.8); font-weight:600; }
+  .tags-row { display:flex; flex-wrap:wrap; gap:8px; padding:4px 0 0; }
+  .tag { background:rgba(255,255,255,0.1); color:#fff; padding:5px 14px; border-radius:16px; font-size:12px; font-weight:400; border:1px solid rgba(255,255,255,0.15); }
+  ${printStyles}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect,useMemo,useRef}=React;
-const h=React.createElement;
+<div class="page">
+  <div class="header">
+    <h1>הצעת מחיר – חובות הלבבות</h1>
+    <div class="sub">מספר הצעה: ${quoteNum}</div>
+  </div>
+  <div class="section">
+    <div class="section-title">פרטי האירוע</div>
+    <table class="detail-table">${detailRows}</table>
+    ${included.length > 0 ? `<div class="section-title">כלול בחבילה</div><div class="tags-row">${included.map(i => `<span class="tag">${i}</span>`).join('')}</div>` : ''}
+    ${extras.length > 0 ? `<div class="section-title">תוספות</div><div class="tags-row">${extras.map(e => `<span class="tag">${e}</span>`).join('')}</div>` : ''}
+    <div class="section-title">פירוט עלויות</div>
+    <table class="pricing-table">${incomeRows}</table>
+  </div>
+  <div class="summary-box">
+    <div class="summary-row"><span>סכום לפני מע"מ</span><span class="val">${fmtH(calc.REV)} ₪</span></div>
+    <div class="summary-row"><span>מע"מ (18%)</span><span class="val">${fmtH(calc.vat)} ₪</span></div>
+    ${(params.TIP || 0) > 0 ? `<div class="summary-row"><span>טיפ (${params.TIP}%)</span><span class="val">${fmtH(calc.tip)} ₪</span></div>` : ''}
+    <div class="summary-row total"><span>סה"כ לתשלום</span><span class="val">${fmtH(calc.finalTotal)} ₪</span></div>
+  </div>
+  <div class="footer"><strong>חובות הלבבות</strong><br>054.8977.896 | hey@hovothalevavot.com | events.hovothalevavot.com</div>
+</div>
+</body>
+</html>`;
+      };
 
-// ═══ DATA ═══
-const DD={
-  eventTypes:["PRM","OFS","CKT","BRC","RNT"],
-  eL:{PRM:"PRM - פרימיום",OFS:"OFS - אופסייט",CKT:"CKT - קוקטלים",BRC:"BRC - בראנץ'",RNT:"RNT - השכרת חלל"},
-  inp:{
-    ADT:{PRM:"15-80",OFS:"10-70",CKT:"15-80",BRC:"15-80",RNT:"15-80"},
-    CHD:{PRM:"0-20",OFS:"NR",CKT:"0-20",BRC:"0-20",RNT:"0-20"},
-    FOD:{PRM:"IC",OFS:"YN",CKT:"IC",BRC:"IC",RNT:"NR"},
-    KSH:{PRM:"YN",OFS:"YN",CKT:"YN",BRC:"YN",RNT:"NR"},
-    WTR:{PRM:"CMP",OFS:"012",CKT:"CMP",BRC:"CMP",RNT:"012"},
-    PRO:{PRM:"012",OFS:"012",CKT:"012",BRC:"012",RNT:"012"},
-    CRK:{PRM:"YN",OFS:"YN",CKT:"YN",BRC:"YN",RNT:"NR"},
-    CER:{PRM:"YN",OFS:"YN",CKT:"YN",BRC:"YN",RNT:"NR"},
-    FLW:{PRM:"IC",OFS:"YN",CKT:"IC",BRC:"IC",RNT:"YN"},
-    WIN:{PRM:"IC",OFS:"YN",CKT:"IC",BRC:"IC",RNT:"YN"},
-    WINP:{PRM:"YN",OFS:"NR",CKT:"YN",BRC:"YN",RNT:"NR"},
-    KIT:{PRM:"NR",OFS:"YN",CKT:"NR",BRC:"NR",RNT:"YN"},
-  },
-  pr:{
-    IBASE:{PRM:9900,OFS:5500,CKT:7050,BRC:8250,RNT:5500},
-    IMORE:{PRM:550,OFS:500,CKT:470,BRC:500,RNT:"f"},
-    ICRK:{PRM:1000,OFS:1000,CKT:1000,BRC:1000,RNT:0},
-    IPRO:{PRM:75,OFS:75,CKT:75,BRC:75,RNT:0},
-    ICER:{PRM:350,OFS:350,CKT:350,BRC:350,RNT:0},
-    IWINP:{PRM:60,OFS:60,CKT:60,BRC:60,RNT:0},
-    IKIT:{PRM:0,OFS:150,CKT:0,BRC:0,RNT:1000},
-    IFLW:{PRM:0,OFS:1200,CKT:0,BRC:1200,RNT:1200},
-    IWIN:{PRM:0,OFS:70,CKT:70,BRC:70,RNT:70},
-    IKSH:{PRM:1500,OFS:1500,CKT:1500,BRC:1500,RNT:1500},
-    OCHEFB:{PRM:2100,OFS:1200,CKT:1400,BRC:1400,RNT:0},
-    OCHEF1:{PRM:40,OFS:0,CKT:40,BRC:40,RNT:0},
-    OCHEF2:{PRM:0,OFS:30,CKT:0,BRC:0,RNT:0},
-    OCOOK:{PRM:20,OFS:28,CKT:28,BRC:28,RNT:0},
-    OFOOD:{PRM:70,OFS:70,CKT:55,BRC:70,RNT:0},
-    OPRO2:{PRM:20,OFS:20,CKT:20,BRC:20,RNT:0},
-    OCER:{PRM:175,OFS:175,CKT:175,BRC:175,RNT:0},
-    OWINP:{PRM:10,OFS:10,CKT:10,BRC:10,RNT:0},
-    OFLW:{PRM:800,OFS:800,CKT:800,BRC:800,RNT:800},
-    OWIN:{PRM:20,OFS:20,CKT:20,BRC:20,RNT:20},
-    OKSH:{PRM:1000,OFS:1000,CKT:1000,BRC:1000,RNT:1000},
-    OCLEAN:{PRM:500,OFS:500,CKT:500,BRC:500,RNT:500},
-    OEVM:{PRM:700,OFS:700,CKT:700,BRC:700,RNT:700},
-    OWTR:{PRM:400,OFS:400,CKT:400,BRC:400,RNT:400},
-    OOVH:{PRM:750,OFS:750,CKT:750,BRC:750,RNT:0},
-  }
-};
-const K={cream:"#FBEDDF",tan:"#F3CFBD",tc:"#DC8C64",brick:"#B74F3E",rust:"#C64532",sand:"#D7C6C0",sage:"#989777",blue:"#1043BF",dk:"#8B3020",lc:"#FFF8F2",wh:"#FFFFFF"};
+      const handleCopyWhatsApp = () => {
+        const message = generateWhatsAppMessage();
+        const ta = document.createElement('textarea');
+        ta.value = message;
+        ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand('copy');
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2500);
+        } catch (err) {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(message).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2500);
+            });
+          }
+        }
+        document.body.removeChild(ta);
+      };
 
-// ═══ COMPACT UI COMPONENTS ═══
-function Chk({label,checked,onChange}){
-  return h('label',{style:{display:"flex",alignItems:"center",gap:5,cursor:"pointer",fontSize:13,whiteSpace:"nowrap"}},
-    h('div',{style:{width:17,height:17,borderRadius:3,border:"2px solid "+K.brick,backgroundColor:K.wh,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
-      checked&&h('svg',{width:11,height:11,viewBox:"0 0 14 14",fill:"none"},h('path',{d:"M2 7L5.5 10.5L12 3.5",stroke:K.brick,strokeWidth:2.5,strokeLinecap:"round",strokeLinejoin:"round"}))),
-    h('input',{type:"checkbox",checked:checked,onChange:onChange,style:{display:"none"}}),
-    h('span',{style:{color:K.dk}},label))}
+      const [saved, setSaved] = useState(false);
+      const [mondayStatus, setMondayStatus] = useState('');
 
-function NumSld({label,min,max,value,onChange}){
-  return h('div',{style:{flex:1,minWidth:100}},
-    h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:1}},
-      h('span',{style:{fontSize:12,color:K.dk,fontWeight:600}},label),
-      h('span',{style:{fontSize:13,fontWeight:700,color:K.brick,backgroundColor:K.wh,padding:"0 8px",borderRadius:4,border:"1px solid "+K.tan}},value)),
-    h('input',{type:"range",min:min,max:max,value:value,onChange:function(ev){onChange(Number(ev.target.value))},style:{width:"100%",accentColor:K.brick}}))}
+      // ========== MONDAY UPLOAD ==========
+      const uploadToMonday = async (blob, filename) => {
+        let token = localStorage.getItem('monday_token');
+        if (!token) {
+          const t = prompt('הזן את Monday API Token שלך (יישמר לשימוש חוזר):');
+          if (!t) return;
+          localStorage.setItem('monday_token', t.trim());
+          token = t.trim();
+        }
 
-function PctSld({label,min,max,value,onChange}){
-  var aMin=Math.min(min,max),aMax=Math.max(min,max);
-  return h('div',{style:{flex:1,minWidth:100}},
-    h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:1}},
-      h('span',{style:{fontSize:12,color:K.dk,fontWeight:600}},label),
-      h('span',{style:{fontSize:13,fontWeight:700,color:K.brick,backgroundColor:K.wh,padding:"0 8px",borderRadius:4,border:"1px solid "+K.tan}},value+"%")),
-    h('input',{type:"range",min:aMin,max:aMax,value:value,onChange:function(ev){onChange(Number(ev.target.value))},style:{width:"100%",accentColor:K.brick,direction:min>max?"rtl":"ltr"}}))}
+        setMondayStatus('uploading');
+        try {
+          const formData = new FormData();
+          const query = `mutation ($file: File!) { add_file_to_column(item_id: ${mondayItemId}, column_id: "files", file: $file) { id } }`;
+          formData.append('query', query);
+          formData.append('variables[file]', blob, filename);
 
-function Sel3({label,value,onChange}){
-  return h('div',{style:{minWidth:80}},
-    h('label',{style:{fontSize:12,color:K.dk,fontWeight:600,display:"block",marginBottom:1}},label),
-    h('select',{value:String(value),onChange:function(ev){onChange(Number(ev.target.value))},style:{width:"100%",padding:"3px 6px",borderRadius:4,border:"1px solid "+K.tan,backgroundColor:K.wh,fontSize:13,color:K.dk,fontFamily:"'Assistant',sans-serif"}},
-      h('option',{value:"0"},"0"),h('option',{value:"1"},"1"),h('option',{value:"2"},"2")))}
+          const res = await fetch('https://api.monday.com/v2/file', {
+            method: 'POST',
+            headers: { 'Authorization': token },
+            body: formData
+          });
+          const data = await res.json();
+          if (data.errors) throw new Error(data.errors[0].message);
+          setMondayStatus('success');
+          setTimeout(() => setMondayStatus(''), 3000);
+        } catch (err) {
+          console.error('Monday upload failed:', err);
+          setMondayStatus('error');
+          setTimeout(() => setMondayStatus(''), 4000);
+        }
+      };
 
-function Inc({label}){return h('span',{style:{fontSize:12,color:K.sage,fontWeight:600,padding:"1px 6px",borderRadius:4,border:"1px solid "+K.tan,backgroundColor:K.wh,whiteSpace:"nowrap"}},label+" ✓")}
+      const handleSaveFile = async () => {
+        setSaved(true);
+        const html = generateHTMLQuote();
 
-function fN(n){var r=Math.round(n),a=Math.abs(r).toLocaleString("he-IL");return r<0?"- "+a+" ₪":a+" ₪"}
+        if (!window.html2canvas) {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          document.head.appendChild(script);
+          await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; });
+        }
 
-function PL({label,amount,isExp,detail}){
-  var r=Math.round(amount),c=r<0?"#D32F2F":r>0?(isExp?"#D32F2F":"#2E7D32"):K.dk;
-  return h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 0",borderBottom:"1px solid "+K.cream,fontSize:12}},
-    h('div',null,h('span',{style:{color:K.dk}},label),detail&&h('span',{style:{fontSize:10,color:K.sage,marginRight:4}},detail)),
-    h('span',{style:{fontWeight:600,color:c,direction:"ltr",whiteSpace:"nowrap"}},fN(r)))}
+        const iframe = document.createElement('iframe');
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:700px;height:1px;border:none;';
+        document.body.appendChild(iframe);
 
-function SL({label,amount,isTotal,isExp}){
-  var r=Math.round(amount),c=r<0?"#D32F2F":isExp?"#D32F2F":"#2E7D32";
-  return h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:isTotal?"5px 0":"3px 0",borderTop:isTotal?"2px solid "+K.brick:"none",fontSize:isTotal?14:12}},
-    h('span',{style:{fontWeight:isTotal?800:600,color:K.dk}},label),
-    h('span',{style:{fontWeight:isTotal?800:600,color:c,direction:"ltr",whiteSpace:"nowrap"}},fN(r)))}
+        const doc = iframe.contentDocument;
+        doc.open();
+        doc.write(html);
+        doc.close();
 
-// ═══ MAIN APP ═══
-function App(){
-  var D=DD,P=D.pr,I=D.inp;
-  var s=useState,r=useRef;
-  var [et,setET]=s("PRM");
-  var [adt,setAdt]=s(15),[chd,setChd]=s(0);
-  var [food,setFood]=s(false),[ksh,setKsh]=s(false);
-  var [pro,setPro]=s(0),[crk,setCrk]=s(false),[cer,setCer]=s(false);
-  var [flw,setFlw]=s(false),[win,setWin]=s(false);
-  var [winp,setWinp]=s(false),[kit,setKit]=s(false);
-  var [dsc,setDsc]=s(0),[tip,setTip]=s(15);
-  var [mw,setMw]=s(0);
-  var [msg,setMsg]=s("");
-  var [pdf,setPdf]=s(null);
-  var [pdfBusy,setPdfBusy]=s(false);
-  var pdfRef=r(null);
+        await new Promise(r => setTimeout(r, 1200));
 
-  // Load saved PDF template
-  useEffect(function(){try{var b=localStorage.getItem("hlb_pdf");if(b){var bin=atob(b);var u=new Uint8Array(bin.length);for(var i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);setPdf(u.buffer)}}catch(e){}},[]);
+        const pageEl = doc.querySelector('.page');
+        const targetEl = pageEl || doc.body;
 
-  // Reset on event type change
-  useEffect(function(){var r=pR(I.ADT[et]);setAdt(r?r[0]:15);setChd(0);setFood(false);setKsh(false);setPro(0);setCrk(false);setCer(false);setFlw(false);setWin(false);setWinp(false);setKit(false);setDsc(0);setTip(15);setMw(0)},[et]);
+        try {
+          const canvas = await window.html2canvas(targetEl, {
+            scale: 2, useCORS: true, allowTaint: true,
+            backgroundColor: '#3558A0', width: 680, windowWidth: 700, logging: false,
+          });
 
-  function pR(v){if(!v||v==="NR"||v==="IC")return null;var m=v.match(/(\d+)\s*-\s*(\d+)/);return m?[+m[1],+m[2]]:null}
-  function nR(c){return I[c]?.[et]==="NR"}
-  function iC(c){return I[c]?.[et]==="IC"}
-  function isCmp(c){return I[c]?.[et]==="CMP"}
+          canvas.toBlob((blob) => {
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const yy = String(now.getFullYear()).slice(-2);
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const filename = `הצעת_מחיר_${dd}${mm}${yy}_${hh}${min}.png`;
 
-  var tot=adt+chd;
-  var aR=pR(I.ADT[et]),cR=!nR("CHD")?pR(I.CHD[et]):null;
-  var compW=isCmp("WTR")?Math.ceil(tot/20):0;
-  var isRNT=et==="RNT";
+            document.body.removeChild(iframe);
 
-  // ═══ INCOME LINES ═══
-  var iLines=useMemo(function(){var L=[];
-    L.push({l:"חבילת בסיס (עד 15)",a:P.IBASE[et]||0});
-    if(tot>15&&!isRNT){var x=tot-15,pp=P.IMORE[et];if(typeof pp==="number")L.push({l:"תוספת "+x+" נוספים",a:x*pp,d:"("+x+"×"+pp+")"})}
-    else if(tot>15&&isRNT){var x2=Math.ceil(Math.max(0,tot-15)/10)*1000;if(x2>0)L.push({l:"תוספת מעבר ל-15",a:x2})}
-    if(!nR("CRK")&&crk&&P.ICRK[et])L.push({l:"דמי חליצה",a:P.ICRK[et]});
-    if(!nR("PRO")&&pro>0&&P.IPRO[et])L.push({l:"חלבון",a:pro*tot*P.IPRO[et],d:"("+tot+"×"+pro+"×"+P.IPRO[et]+")"});
-    if(!nR("CER")&&cer&&P.ICER[et])L.push({l:"קרמיקה",a:tot*P.ICER[et],d:"("+tot+"×"+P.ICER[et]+")"});
-    if(!nR("WINP")&&winp&&P.IWINP[et])L.push({l:"יין פרימיום",a:adt*P.IWINP[et],d:"("+adt+"×"+P.IWINP[et]+")"});
-    if(!nR("KIT")&&kit&&P.IKIT[et])L.push({l:"מטבח",a:P.IKIT[et]});
-    if(!nR("FLW")&&!iC("FLW")&&flw&&P.IFLW[et])L.push({l:"פרחים",a:P.IFLW[et]});
-    if(!nR("WIN")&&!iC("WIN")&&win&&P.IWIN[et])L.push({l:"יין",a:adt*P.IWIN[et],d:"("+adt+"×"+P.IWIN[et]+")"});
-    if(!nR("KSH")&&ksh&&P.IKSH[et])L.push({l:"הכשרת רב",a:P.IKSH[et]});
-    return L},[et,adt,chd,crk,pro,cer,winp,kit,flw,win,ksh,food,tot]);
+            if (mondayItemId) {
+              uploadToMonday(blob, filename);
+            } else {
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }
+            setTimeout(() => setSaved(false), 2500);
+          }, 'image/png');
+        } catch (err) {
+          console.error('html2canvas failed, using fallback:', err);
+          document.body.removeChild(iframe);
+          generatePNGFallback();
+          setTimeout(() => setSaved(false), 2500);
+        }
+      };
 
-  // ═══ EXPENSE LINES ═══
-  var expLines=useMemo(function(){var L=[];
-    if(!isRNT&&P.OCHEFB[et])L.push({l:"שף בסיס",a:P.OCHEFB[et]});
-    if(!isRNT&&P.OCHEF1[et]&&tot>35)L.push({l:"שף תוספת ("+(tot-35)+" מעל 35)",a:(tot-35)*P.OCHEF1[et]});
-    if(!isRNT&&P.OCHEF2[et]&&tot>10)L.push({l:"שף תוספת ("+(tot-10)+" מעל 10)",a:(tot-10)*P.OCHEF2[et]});
-    if(!isRNT&&P.OCOOK[et]){var ck=Math.floor(tot/P.OCOOK[et])*500;if(ck>0)L.push({l:"טבח נוסף",a:ck})}
-    if(!isRNT&&P.OFOOD[et]&&!(et==="OFS"&&!food))L.push({l:"פודקוסט",a:tot*P.OFOOD[et],d:"("+tot+"×"+P.OFOOD[et]+")"});
-    if(!isRNT&&pro>0&&P.IPRO[et]){var f15=Math.min(tot,15)*30+Math.max(0,tot-15)*15;L.push({l:"חומ\"ג חלבון",a:f15*pro})}
-    if(!isRNT&&pro>0&&P.OPRO2[et])L.push({l:"חלבון לשף",a:pro*tot*P.OPRO2[et]});
-    if(!isRNT&&cer&&P.OCER[et])L.push({l:"עלות קרמיקה",a:tot*P.OCER[et]});
-    if(!isRNT&&winp&&P.OWINP[et])L.push({l:"עלות יין פרימיום",a:adt*P.OWINP[et]});
-    if((iC("FLW")||flw)&&P.OFLW[et])L.push({l:"עלות פרחים",a:P.OFLW[et]});
-    if((iC("WIN")||win)&&P.OWIN[et])L.push({l:"עלות יין",a:adt*P.OWIN[et]});
-    if(ksh&&P.OKSH[et])L.push({l:"עלות הכשרת רב",a:P.OKSH[et]});
-    if(P.OCLEAN[et])L.push({l:"נקיון",a:P.OCLEAN[et]});
-    if(P.OEVM[et])L.push({l:"מנהל אירוע",a:P.OEVM[et]});
-    if(isCmp("WTR")&&compW>0&&P.OWTR[et])L.push({l:"מלצרים",a:compW*P.OWTR[et]});
-    if(!isCmp("WTR")&&!nR("WTR")&&mw>0&&P.OWTR[et])L.push({l:"מלצרים",a:mw*P.OWTR[et]});
-    if(P.OOVH[et])L.push({l:"תקורה",a:P.OOVH[et]});
-    return L},[et,adt,chd,food,ksh,pro,crk,cer,flw,win,winp,kit,tot,compW,mw]);
+      const generatePNGFallback = () => {
+        const calc = calculatePricing();
+        const config = pricingData[eventType];
+        const totalGuests = (params.ADT || 0) + (params.CHD || 0);
+        const adults = params.ADT || 0;
+        const children = params.CHD || 0;
+        const eventNames = { PRM: 'פרימיום', OFS: 'אופסייט', CKT: 'קוקטלים', BRC: "בראנץ'", RNT: 'השכרת חלל' };
 
-  var subI=iLines.reduce(function(s,x){return s+x.a},0);
-  var chDisc=chd*100, dscAmt=Math.round(subI*dsc/100);
-  var REV=subI-chDisc-dscAmt;
-  var vatAmt=Math.round(REV*0.18), tipAmt=Math.round(REV*tip/100);
-  var total=REV+vatAmt+tipAmt;
-  var bonus=Math.round(REV*0.03);
-  var COG=expLines.reduce(function(s,x){return s+x.a},0)+bonus;
-  var GDP=REV-COG;
+        const now = new Date();
+        const dd = String(now.getDate()).padStart(2, '0');
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const yy = String(now.getFullYear()).slice(-2);
+        const hh = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
 
-  // ═══ WHATSAPP ═══
-  function genWA(){
-    var eLabel=D.eL[et],fm=function(n){return Math.round(n).toLocaleString("he-IL")};
-    var m="🏛️ *חובות הלבבות - הצעת מחיר*\n━━━━━━━━━━━━━━━━━━━━━\n\n📋 *פרטי האירוע:*\n▫️ סוג אירוע: "+eLabel+"\n▫️ מספר מבוגרים: "+adt+"\n";
-    if(!nR("CHD")&&chd>0)m+="▫️ מספר ילדים: "+chd+"\n";
-    m+="▫️ סה\"כ אורחים: "+tot+"\n\n🍽️ *מה כולל האירוע:*\n";
-    if(iC("FOD"))m+="✅ אוכל - כלול בחבילה\n";else if(!nR("FOD")&&food)m+="✅ אוכל\n";
-    if(iC("WIN"))m+="✅ יין - כלול בחבילה\n";else if(!nR("WIN")&&win)m+="✅ יין\n";
-    if(!nR("WINP")&&winp)m+="✅ תוספת יין פרימיום\n";
-    if(iC("FLW"))m+="✅ סידור פרחים - כלול בחבילה\n";else if(!nR("FLW")&&flw)m+="✅ סידור פרחים\n";
-    if(!nR("PRO")&&pro>0)m+="✅ תוספת מנות חלבון: "+pro+" לאדם\n";
-    if(!nR("CER")&&cer)m+="✅ סדנת קרמיקה\n";
-    if(!nR("KSH")&&ksh)m+="✅ הכשרת רב\n";
-    if(!nR("CRK")&&crk)m+="✅ דמי חליצה\n";
-    if(!nR("WTR")){var wc=isCmp("WTR")?compW:mw;if(wc>0)m+="✅ מלצרים: "+wc+"\n"}
-    if(!nR("KIT")&&kit)m+="✅ שימוש במטבח\n";
-    m+="\n💰 *פירוט מחירים:*\n";
-    iLines.forEach(function(x){m+="▫️ "+x.l+": "+fm(x.a)+" ₪\n"});m+="\n";
-    if(chDisc>0||dscAmt>0){m+="🏷️ *הנחות:*\n";if(chDisc>0)m+="▫️ הנחת ילדים ("+chd+"×100): -"+fm(chDisc)+" ₪\n";if(dscAmt>0)m+="▫️ הנחה "+dsc+"%: -"+fm(dscAmt)+" ₪\n";m+="\n"}
-    m+="━━━━━━━━━━━━━━━━━━━━━\n📊 *סיכום לתשלום:*\n▫️ סה\"כ לפני מע\"מ: "+fm(REV)+" ₪\n▫️ מע\"מ (18%): "+fm(vatAmt)+" ₪\n";
-    if(tipAmt>0)m+="▫️ טיפ ("+tip+"%): "+fm(tipAmt)+" ₪\n";
-    m+="\n💎 *סה\"כ לתשלום: "+fm(total)+" ₪*\n━━━━━━━━━━━━━━━━━━━━━\n\n_חובות הלבבות - חוויה קולינרית_\n_events.hovothalevavot.com_";
-    return m}
+        const W = 680, scale = 2;
+        const BG = '#3558A0', GOLD = '#C8A84E', WHITE = '#ffffff', LIGHT = 'rgba(255,255,255,0.7)';
 
-  function copyWA(){var m=genWA();var ta=document.createElement("textarea");ta.value=m;ta.style.cssText="position:fixed;left:-9999px;opacity:0";document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand("copy");setMsg("✓ הועתק!")}catch(e){setMsg("שגיאה")}document.body.removeChild(ta);setTimeout(function(){setMsg("")},2500)}
+        const lines = [];
+        const push = (text, style = {}) => lines.push({ text, ...style });
 
-  // ═══ PDF UPLOAD ═══
-  function handlePdf(ev){var f=ev.target.files&&ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(v){var ab=v.target.result;setPdf(ab);try{var b=new Uint8Array(ab);var s="";for(var i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);localStorage.setItem("hlb_pdf",btoa(s));setMsg("✓ תבנית נשמרה!")}catch(e){setMsg("✓ תבנית נטענה")}setTimeout(function(){setMsg("")},2500)};r.readAsArrayBuffer(f);ev.target.value=""}
+        push('הצעת מחיר – חובות הלבבות', { size: 22, weight: 'bold', color: WHITE, y: 60 });
+        push(`מספר הצעה: ${dd}${mm}${yy}-${hh}${min}`, { size: 13, color: LIGHT, y: 85 });
+        push('פרטי האירוע', { size: 14, weight: 'bold', color: GOLD, y: 130 });
+        push(`סוג: ${eventNames[eventType]}  |  מבוגרים: ${adults}${children > 0 ? `  |  ילדים: ${children}` : ''}`, { size: 14, color: WHITE, y: 160 });
+        push('פירוט עלויות', { size: 14, weight: 'bold', color: GOLD, y: 200 });
 
-  // ═══ PDF GENERATION ═══
-  async function genPDF(){
-    if(!pdf){pdfRef.current&&pdfRef.current.click();return}
-    if(!window.PDFLib){setMsg("⚠️ ממתין לטעינה...");setTimeout(function(){setMsg("")},2000);return}
-    setPdfBusy(true);setMsg("מייצר PDF...");
-    try{
-      var PDFDocument=window.PDFLib.PDFDocument,rgb=window.PDFLib.rgb;
-      var tpl=await PDFDocument.load(pdf),doc=await PDFDocument.create();
-      var cp=await doc.copyPages(tpl,[0,1]);doc.addPage(cp[0]);doc.addPage(cp[1]);
-      var sz=tpl.getPage(2).getSize(),pw=sz.width,ph=sz.height;
-      var cp3=await doc.copyPages(tpl,[2]);doc.addPage(cp3[0]);var pg3=doc.getPage(2);
-      pg3.drawRectangle({x:0,y:0,width:pw,height:ph-90,color:rgb(251/255,237/255,223/255)});
-      var wt=genWA(),sc=2,cW2=Math.round(pw*sc),cH=Math.round((ph-100)*sc);
-      var cvs=document.createElement("canvas");cvs.width=cW2;cvs.height=cH;var ctx=cvs.getContext("2d");
-      ctx.fillStyle="#FBEDDF";ctx.fillRect(0,0,cW2,cH);
-      ctx.textAlign="right";ctx.direction="rtl";var rX=cW2-50*sc;var y2=40*sc;var nS=11*sc,hS=13*sc,tS=15*sc,mg=50*sc;
-      var lines=wt.split("\n");
-      for(var i=0;i<lines.length;i++){
-        if(y2>cH-20)break;var ln=lines[i].trim();if(!ln){y2+=nS*0.6;continue}
-        if(ln.indexOf("━━━")>=0){ctx.strokeStyle="#C8B4AA";ctx.lineWidth=sc;ctx.beginPath();ctx.moveTo(mg,y2);ctx.lineTo(cW2-mg,y2);ctx.stroke();y2+=nS*0.6;continue}
-        var isB=ln.indexOf("*")>=0,dt=ln.replace(/\*/g,"").replace(/━+/g,"");
-        var isT=dt.indexOf("סה\"כ לתשלום")>=0,isM=dt.indexOf("חובות הלבבות - הצעת מחיר")>=0;
-        var isS=dt.indexOf("פרטי האירוע:")>=0||dt.indexOf("מה כולל האירוע:")>=0||dt.indexOf("פירוט מחירים:")>=0||dt.indexOf("סיכום לתשלום:")>=0||dt.indexOf("הנחות:")>=0;
-        var fs=nS,fw="400",cl="#503228";
-        if(isT){fs=tS;fw="800";cl="#1043BF"}else if(isM){fs=hS;fw="700";cl="#1043BF"}else if(isS||isB){fs=nS*1.05;fw="700";cl="#1043BF"}
-        ctx.font=fw+" "+fs+"px 'Assistant','Heebo','Arial Hebrew','Segoe UI',Arial,sans-serif";ctx.fillStyle=cl;ctx.fillText(dt,rX,y2);y2+=fs*1.5}
-      var pB=cvs.toDataURL("image/png").split(",")[1];
-      var pI=await doc.embedPng(Uint8Array.from(atob(pB),function(c){return c.charCodeAt(0)}));
-      pg3.drawImage(pI,{x:5,y:5,width:pw-10,height:ph-100});
-      if(tpl.getPageCount()>=4){var cp4=await doc.copyPages(tpl,[3]);doc.addPage(cp4[0])}
-      var bytes=await doc.save();var blob=new Blob([bytes],{type:"application/pdf"});
-      var u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="הצעת_מחיר_חובות_הלבבות.pdf";document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
-      setMsg("✓ PDF הורד!");setTimeout(function(){setMsg("")},3000);
-    }catch(err){console.error(err);setMsg("שגיאה: "+err.message);setTimeout(function(){setMsg("")},4000)}
-    finally{setPdfBusy(false)}}
+        let yPos = 230;
+        calc.income.forEach(item => {
+          push(`${item.label}: ${Math.round(item.amount).toLocaleString('he-IL')} ₪`, { size: 13, color: WHITE, y: yPos });
+          yPos += 28;
+        });
 
-  // ═══ RENDER ═══
-  var cd={backgroundColor:K.wh,borderRadius:10,padding:"10px 12px",marginBottom:8,boxShadow:"0 1px 8px rgba(139,48,32,0.06)",border:"1px solid "+K.tan};
-  var rw={display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"};
-  var ckRow={display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"};
+        if (calc.childrenDiscount < 0) {
+          push(`הנחה לילדים: ${Math.round(calc.childrenDiscount).toLocaleString('he-IL')} ₪`, { size: 13, color: '#ffb3b3', y: yPos }); yPos += 28;
+        }
+        if (calc.percentageDiscount < 0) {
+          push(`הנחה ${params.DSC}%: ${Math.round(calc.percentageDiscount).toLocaleString('he-IL')} ₪`, { size: 13, color: '#ffb3b3', y: yPos }); yPos += 28;
+        }
 
-  return h('div',{style:{minHeight:"100vh",background:"linear-gradient(170deg,"+K.lc+" 0%,"+K.cream+" 40%,"+K.sand+" 100%)",fontFamily:"'Assistant','Heebo',sans-serif",direction:"rtl"}},
+        yPos += 10;
+        push(`לפני מע"מ: ${Math.round(calc.REV).toLocaleString('he-IL')} ₪`, { size: 14, color: WHITE, y: yPos }); yPos += 30;
+        push(`מע"מ 18%: ${Math.round(calc.vat).toLocaleString('he-IL')} ₪`, { size: 14, color: WHITE, y: yPos }); yPos += 30;
+        if ((params.TIP || 0) > 0) { push(`טיפ ${params.TIP}%: ${Math.round(calc.tip).toLocaleString('he-IL')} ₪`, { size: 14, color: WHITE, y: yPos }); yPos += 30; }
+        yPos += 10;
+        push(`סה"כ לתשלום: ${Math.round(calc.finalTotal).toLocaleString('he-IL')} ₪`, { size: 20, weight: 'bold', color: GOLD, y: yPos }); yPos += 50;
+        push('חובות הלבבות  |  054.8977.896', { size: 12, color: LIGHT, y: yPos + 20 });
 
-    // Header
-    h('div',{style:{background:"linear-gradient(135deg,"+K.brick+" 0%,"+K.rust+" 50%,"+K.dk+" 100%)",padding:"12px 16px 10px",textAlign:"center",boxShadow:"0 3px 12px rgba(139,48,32,0.3)"}},
-      h('h1',{style:{margin:0,fontSize:22,fontWeight:800,color:K.cream,fontFamily:"'Playfair Display',serif"}},"חובות הלבבות"),
-      h('p',{style:{margin:"2px 0 0",fontSize:11,color:K.tan,fontWeight:300,letterSpacing:2}},"מחשבון תמחור אירועים")),
+        const totalH = yPos + 80;
+        const canvas = document.createElement('canvas');
+        canvas.width = W * scale;
+        canvas.height = totalH * scale;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+        ctx.fillStyle = BG;
+        ctx.fillRect(0, 0, W, totalH);
 
-    h('div',{style:{maxWidth:900,margin:"0 auto",padding:"10px 10px 30px"}},
+        lines.forEach(line => {
+          ctx.font = `${line.weight || 'normal'} ${line.size || 14}px system-ui, sans-serif`;
+          ctx.fillStyle = line.color || WHITE;
+          ctx.textAlign = 'center';
+          ctx.fillText(line.text, W / 2, line.y);
+        });
 
-      // Event Type row
-      h('div',{style:Object.assign({},cd,{display:"flex",alignItems:"center",gap:10})},
-        h('label',{style:{fontSize:14,fontWeight:700,color:K.brick,whiteSpace:"nowrap"}},"סוג אירוע"),
-        h('select',{value:et,onChange:function(ev){setET(ev.target.value)},style:{flex:1,padding:"6px 10px",borderRadius:6,border:"2px solid "+K.brick,backgroundColor:K.lc,fontSize:14,fontWeight:600,color:K.dk,fontFamily:"'Assistant',sans-serif"}},
-          D.eventTypes.map(function(t){return h('option',{key:t,value:t},D.eL[t])}))),
+        canvas.toBlob((blob) => {
+          const filename = `הצעת_מחיר_${dd}${mm}${yy}_${hh}${min}.png`;
+          if (mondayItemId) {
+            uploadToMonday(blob, filename);
+          } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }
+        }, 'image/png');
+      };
 
-      // Parameters Card
-      h('div',{style:cd},
-        h('div',{style:{fontSize:14,fontWeight:700,color:K.brick,marginBottom:6,borderBottom:"2px solid "+K.cream,paddingBottom:4}},"פרמטרים"),
+      // ========== PDF GENERATION ==========
+      const handleGeneratePDF = () => {
+        setPdfLoading(true);
+        try {
+          const baseHtml = generateHTMLQuote(true);
+          const htmlWithPrint = baseHtml.replace('</body>', `
+<div style="text-align:center;padding:20px;position:fixed;bottom:0;left:0;right:0;background:#2c4d8a;z-index:999;" class="no-print-btn">
+  <button onclick="this.parentElement.style.display='none';window.print();" style="background:#C8A84E;color:#1e3a5f;border:none;padding:14px 40px;font-size:16px;font-weight:700;border-radius:8px;cursor:pointer;font-family:'Heebo',sans-serif;">שמור כ-PDF</button>
+</div>
+<style>@media print{.no-print-btn{display:none!important}}</style>
+</body>`);
+          const blob = new Blob([htmlWithPrint], { type: 'text/html;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const now = new Date();
+          const dd = String(now.getDate()).padStart(2, '0');
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const yy = String(now.getFullYear()).slice(-2);
+          a.download = `הצעת_מחיר_${dd}${mm}${yy}.html`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          console.error('PDF error:', err);
+        } finally {
+          setPdfLoading(false);
+        }
+      };
 
-        // Row 1: Adults + Children side by side
-        h('div',{style:rw},
-          aR&&h(NumSld,{label:"מבוגרים",min:aR[0],max:aR[1],value:adt,onChange:setAdt}),
-          cR&&h(NumSld,{label:"ילדים",min:cR[0],max:cR[1],value:chd,onChange:setChd})),
+      const calc = calculatePricing();
+      const config = pricingData[eventType];
 
-        // Row 2: Total + Waiters + Protein
-        h('div',{style:Object.assign({},rw,{marginTop:6})},
-          h('div',{style:{display:"flex",alignItems:"center",gap:4,fontSize:12,color:K.dk}},
-            h('span',{style:{fontWeight:600}},"סה״כ:"),
-            h('span',{style:{fontWeight:700,color:K.brick,fontSize:14}},tot)),
-          isCmp("WTR")&&h('div',{style:{display:"flex",alignItems:"center",gap:4,fontSize:12,color:K.dk}},
-            h('span',{style:{fontWeight:600}},"מלצרים:"),
-            h('span',{style:{fontWeight:700,color:K.brick,fontSize:14}},compW)),
-          !nR("WTR")&&!isCmp("WTR")&&h(Sel3,{label:"מלצרים",value:mw,onChange:setMw}),
-          !nR("PRO")&&h(Sel3,{label:"חלבון",value:pro,onChange:setPro})),
+      const eventTypes = [
+        { key: 'PRM', label: 'פרימיום', icon: '✨' },
+        { key: 'OFS', label: 'אופסייט', icon: '🏕️' },
+        { key: 'CKT', label: 'קוקטלים', icon: '🍸' },
+        { key: 'BRC', label: "בראנץ'", icon: '🥐' },
+        { key: 'RNT', label: 'השכרת חלל', icon: '🏛️' },
+      ];
 
-        // Row 3: Checkboxes
-        h('div',{style:Object.assign({},ckRow,{marginTop:6})},
-          !nR("FOD")&&!iC("FOD")&&h(Chk,{label:"אוכל",checked:food,onChange:function(ev){setFood(ev.target.checked)}}),
-          iC("FOD")&&h(Inc,{label:"אוכל"}),
-          !nR("KSH")&&h(Chk,{label:"הכשרת רב",checked:ksh,onChange:function(ev){setKsh(ev.target.checked)}}),
-          !nR("CRK")&&h(Chk,{label:"דמי חליצה",checked:crk,onChange:function(ev){setCrk(ev.target.checked)}}),
-          !nR("CER")&&h(Chk,{label:"קרמיקה",checked:cer,onChange:function(ev){setCer(ev.target.checked)}})),
+      const Toggle = ({ checked, onChange, label, included }) => {
+        if (included) return (
+          <div className="bg-amber-50 px-3 py-2 rounded-lg border-2 border-amber-200 flex items-center justify-between">
+            <span className="text-gray-700 font-semibold text-sm">{label}</span>
+            <span className="text-xs bg-amber-200 text-amber-800 font-bold px-2 py-0.5 rounded-full">כלול</span>
+          </div>
+        );
+        return (
+          <label className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border-2 transition-all ${checked ? 'bg-amber-100 border-amber-400 shadow-sm' : 'bg-amber-50 border-amber-200 hover:border-amber-300'}`}>
+            <input type="checkbox" checked={checked} onChange={onChange} className="w-4 h-4 accent-amber-600" />
+            <span className="text-gray-700 font-semibold text-sm">{label}</span>
+            {checked && <span className="mr-auto text-amber-600 text-xs font-bold">✓</span>}
+          </label>
+        );
+      };
 
-        // Row 4: More checkboxes
-        h('div',{style:Object.assign({},ckRow,{marginTop:4})},
-          !nR("FLW")&&!iC("FLW")&&h(Chk,{label:"פרחים",checked:flw,onChange:function(ev){setFlw(ev.target.checked)}}),
-          iC("FLW")&&h(Inc,{label:"פרחים"}),
-          !nR("WIN")&&!iC("WIN")&&h(Chk,{label:"יין",checked:win,onChange:function(ev){setWin(ev.target.checked)}}),
-          iC("WIN")&&h(Inc,{label:"יין"}),
-          !nR("WINP")&&h(Chk,{label:"יין פרימיום",checked:winp,onChange:function(ev){setWinp(ev.target.checked)}}),
-          !nR("KIT")&&h(Chk,{label:"מטבח",checked:kit,onChange:function(ev){setKit(ev.target.checked)}})),
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50 p-3" dir="rtl" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-l from-amber-700 to-orange-600 text-white rounded-xl shadow-lg p-5 mb-5 flex items-center justify-center gap-5">
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center shadow-inner overflow-hidden border-2 border-amber-200">
+                  <svg viewBox="0 0 100 120" width="58" height="70" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="50" cy="60" rx="46" ry="56" stroke="#3d4fa0" strokeWidth="3" fill="#fdf8f0"/>
+                    <path d="M50 82 C50 82 26 65 26 50 C26 41 33 36 41 40 C45.5 42 50 48 50 48 C50 48 54.5 42 59 40 C67 36 74 41 74 50 C74 65 50 82 50 82Z" stroke="#3d4fa0" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M40 52 Q45 46 50 52 Q55 58 60 52" stroke="#3d4fa0" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                    <circle cx="8" cy="60" r="2.5" fill="#3d4fa0"/>
+                    <circle cx="92" cy="60" r="2.5" fill="#3d4fa0"/>
+                    <text x="50" y="28" textAnchor="middle" fontFamily="serif" fontSize="11" fill="#3d4fa0" fontWeight="bold">חובות</text>
+                    <text x="50" y="105" textAnchor="middle" fontFamily="serif" fontSize="11" fill="#3d4fa0" fontWeight="bold">הלבבות</text>
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold">מערכת תמחור אירועים</h1>
+                <p className="mt-0.5 text-amber-100">חובות הלבבות</p>
+                {mondayItemId && (
+                  <div className="mt-2 inline-flex items-center gap-2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                    📋 מחובר ל-Monday #{mondayItemId}
+                  </div>
+                )}
+              </div>
+              <div className="flex-shrink-0 w-16"></div>
+            </div>
 
-        // Row 5: Discount + Tip sliders side by side
-        h('div',{style:Object.assign({},rw,{marginTop:6})},
-          h(PctSld,{label:"הנחה",min:0,max:15,value:dsc,onChange:setDsc}),
-          h(PctSld,{label:"טיפ",min:0,max:15,value:tip,onChange:setTip}))),
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* INPUT */}
+              <div className="bg-white rounded-xl shadow-lg p-5">
+                <h2 className="text-xl font-bold text-amber-800 mb-4">פרטי האירוע</h2>
 
-      // ═══ PRICING TWO COLUMNS ═══
-      h('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}},
+                {/* Event Type Cards */}
+                <div className="grid grid-cols-5 gap-2 mb-5">
+                  {eventTypes.map(et => (
+                    <button key={et.key} onClick={() => setEventType(et.key)}
+                      className={`flex flex-col items-center justify-center p-2.5 rounded-xl border-2 transition-all cursor-pointer
+                        ${eventType === et.key ? 'bg-amber-100 border-amber-500 shadow-md scale-105' : 'bg-amber-50 border-amber-200 hover:border-amber-400'}`}>
+                      <span className="text-2xl mb-1">{et.icon}</span>
+                      <span className={`text-xs font-bold ${eventType === et.key ? 'text-amber-800' : 'text-gray-600'}`}>{et.label}</span>
+                    </button>
+                  ))}
+                </div>
 
-        // Income
-        h('div',{style:cd},
-          h('div',{style:{fontSize:13,fontWeight:700,color:"#2E7D32",marginBottom:6,borderBottom:"2px solid #C8E6C9",paddingBottom:3}},"💰 הכנסות"),
-          iLines.map(function(x,i){return h(PL,{key:i,label:x.l,amount:x.a,detail:x.d})}),
-          h('div',{style:{height:1,backgroundColor:K.tan,margin:"4px 0"}}),
-          h(SL,{label:"סה״כ ברוטו",amount:subI}),
-          chDisc>0&&h(PL,{label:"הנחת ילדים ("+chd+"×100)",amount:-chDisc}),
-          dscAmt>0&&h(PL,{label:"הנחה ("+dsc+"%)",amount:-dscAmt}),
-          h(SL,{label:"לפני מע״מ (REV)",amount:REV}),
-          h(PL,{label:"מע\"מ (18%)",amount:vatAmt}),
-          tipAmt>0&&h(PL,{label:"טיפ ("+tip+"%)",amount:tipAmt}),
-          h(SL,{label:"סה״כ לתשלום",amount:total,isTotal:true})),
+                {/* Adults & Children */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {config.ADT && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">מבוגרים ({config.ADT.min}-{config.ADT.max})</label>
+                      <input type="range" min={config.ADT.min} max={config.ADT.max} value={params.ADT || config.ADT.default}
+                        onChange={(e) => setParams({...params, ADT: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-xl font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.ADT || config.ADT.default}</div>
+                    </div>
+                  )}
+                  {config.CHD && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">ילדים ({config.CHD.min}-{config.CHD.max})</label>
+                      <input type="range" min={config.CHD.min} max={config.CHD.max} value={params.CHD || config.CHD.default}
+                        onChange={(e) => setParams({...params, CHD: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-xl font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.CHD || config.CHD.default}</div>
+                    </div>
+                  )}
+                </div>
 
-        // Expenses
-        h('div',{style:cd},
-          h('div',{style:{fontSize:13,fontWeight:700,color:"#D32F2F",marginBottom:6,borderBottom:"2px solid #FFCDD2",paddingBottom:3}},"📊 הוצאות"),
-          expLines.map(function(x,i){return h(PL,{key:i,label:x.l,amount:x.a,detail:x.d,isExp:true})}),
-          h('div',{style:{height:1,backgroundColor:K.tan,margin:"4px 0"}}),
-          h(PL,{label:"בונוס מכירות (3%)",amount:bonus,isExp:true}),
-          h(SL,{label:"סה״כ הוצאות (COG)",amount:COG,isExp:true}))),
+                {/* Food + Kashrut */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.FOD && <Toggle label="אוכל" included={config.FOD === 'כלול'} checked={params.FOD === 'כן'} onChange={(e) => setParams({...params, FOD: e.target.checked ? 'כן' : 'לא'})} />}
+                  {config.KSH && <Toggle label="הכשרת רב" checked={params.KSH === 'כן'} onChange={(e) => setParams({...params, KSH: e.target.checked ? 'כן' : 'לא'})} />}
+                </div>
 
-      // Gross Profit
-      h('div',{style:Object.assign({},cd,{border:"2px solid "+(GDP>=0?"#2E7D32":"#D32F2F"),padding:"8px 12px"})},
-        h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
-          h('span',{style:{fontSize:15,fontWeight:800,color:K.dk}},"רווח גולמי (GDP)"),
-          h('span',{style:{fontSize:18,fontWeight:800,color:GDP>=0?"#2E7D32":"#D32F2F",direction:"ltr"}},fN(GDP))),
-        h('div',{style:{display:"flex",justifyContent:"space-between",marginTop:3,fontSize:11,color:K.sage}},
-          h('span',null,"רווח: "+(REV>0?Math.round(GDP/REV*100):0)+"%"),
-          h('span',null,"REV: "+fN(REV)+" | COG: "+fN(COG)))),
+                {/* Cork + Ceramics */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.CRK && <Toggle label="דמי חליצה" checked={params.CRK === 'כן'} onChange={(e) => setParams({...params, CRK: e.target.checked ? 'כן' : 'לא'})} />}
+                  {config.CER && <Toggle label="סדנת קרמיקה" checked={params.CER === 'כן'} onChange={(e) => setParams({...params, CER: e.target.checked ? 'כן' : 'לא'})} />}
+                </div>
 
-      // Buttons row
-      h('div',{style:{display:"flex",gap:8,marginTop:4}},
-        h('button',{onClick:copyWA,style:{flex:1,padding:"10px",borderRadius:10,backgroundColor:"#25D366",color:K.wh,border:"none",cursor:"pointer",fontFamily:"'Assistant',sans-serif",fontSize:15,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6}},h('span',null,"📋"),h('span',null,"העתק לווטסאפ")),
-        h('button',{onClick:genPDF,disabled:pdfBusy,style:{flex:1,padding:"10px",borderRadius:10,backgroundColor:pdf?K.brick:K.sand,color:K.wh,border:"none",cursor:pdf?"pointer":"default",fontFamily:"'Assistant',sans-serif",fontSize:15,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:6,opacity:pdfBusy?0.7:1}},h('span',null,"📄"),h('span',null,pdfBusy?"מייצר...":pdf?"הורד PDF":"טען תבנית PDF"))),
+                {/* Flowers + Wine */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.FLW && <Toggle label="פרחים" included={config.FLW === 'כלול'} checked={params.FLW === 'כן'} onChange={(e) => setParams({...params, FLW: e.target.checked ? 'כן' : 'לא'})} />}
+                  {config.WIN && <Toggle label="יין" included={config.WIN === 'כלול'} checked={params.WIN === 'כן'} onChange={(e) => setParams({...params, WIN: e.target.checked ? 'כן' : 'לא'})} />}
+                </div>
 
-      // Hidden PDF input
-      h('input',{ref:pdfRef,type:"file",accept:".pdf",onChange:handlePdf,style:{display:"none"}}),
+                {/* Protein + Premium Wine */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.PRO && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">מנות חלבון</label>
+                      <div className="flex gap-3 bg-amber-50 p-2 rounded-lg border-2 border-amber-200">
+                        {config.PRO.map(num => (
+                          <label key={num} className="flex items-center gap-1 cursor-pointer">
+                            <input type="radio" name="protein" value={num} checked={(params.PRO || 0) === num}
+                              onChange={() => setParams({...params, PRO: num})} className="accent-amber-600 w-4 h-4" />
+                            <span className="text-gray-700 font-semibold text-sm">{num}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {config.WINP && (
+                    <div className="flex items-end"><div className="w-full">
+                      <Toggle label="יין פרימיום" checked={params.WINP === 'כן'} onChange={(e) => setParams({...params, WINP: e.target.checked ? 'כן' : 'לא'})} />
+                    </div></div>
+                  )}
+                </div>
 
-      // Status
-      msg&&h('div',{style:{textAlign:"center",marginTop:6,padding:"5px 12px",borderRadius:6,backgroundColor:msg.indexOf("שגיאה")>=0||msg.indexOf("⚠️")>=0?"#FFEBEE":"#E8F5E9",color:msg.indexOf("שגיאה")>=0||msg.indexOf("⚠️")>=0?"#D32F2F":"#2E7D32",fontWeight:700,fontSize:13}},msg))
-  )
-}
+                {/* Kitchen + Waiters */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  {config.KIT && (
+                    <div className="flex items-end"><div className="w-full">
+                      <Toggle label="שימוש במטבח" checked={params.KIT === 'כן'} onChange={(e) => setParams({...params, KIT: e.target.checked ? 'כן' : 'לא'})} />
+                    </div></div>
+                  )}
+                  {config.WTR && (
+                    <div>
+                      {config.WTR === 'calc' ? (
+                        <div className="bg-amber-50 px-3 py-2 rounded-lg border-2 border-amber-200 flex items-center justify-between">
+                          <span className="text-gray-700 font-semibold text-sm">מלצרים</span>
+                          <span className="text-amber-700 font-bold">{calculateWaiters()}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <label className="block text-gray-700 font-semibold mb-1 text-sm">מלצרים</label>
+                          <select value={params.WTR || 0} onChange={(e) => setParams({...params, WTR: parseInt(e.target.value)})}
+                            className="w-full p-2 border-2 border-amber-300 rounded-lg bg-amber-50 text-sm">
+                            {config.WTR.map(num => <option key={num} value={num}>{num}</option>)}
+                          </select>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-ReactDOM.render(h(App),document.getElementById("root"));
-</script>
+                {/* Discount & Tip */}
+                <div className="grid grid-cols-2 gap-4 mb-2">
+                  {config.DSC && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">הנחה ({config.DSC.min}%-{config.DSC.max}%)</label>
+                      <input type="range" min={config.DSC.min} max={config.DSC.max} value={params.DSC || config.DSC.default}
+                        onChange={(e) => setParams({...params, DSC: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-lg font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.DSC || config.DSC.default}%</div>
+                    </div>
+                  )}
+                  {config.TIP && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 text-sm">טיפ ({config.TIP.min}%-{config.TIP.max}%)</label>
+                      <input type="range" min={config.TIP.min} max={config.TIP.max} value={params.TIP !== undefined ? params.TIP : config.TIP.default}
+                        onChange={(e) => setParams({...params, TIP: parseInt(e.target.value)})}
+                        className="w-full h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
+                      <div className="text-center mt-1 text-lg font-bold text-amber-700 bg-amber-50 p-1 rounded">{params.TIP !== undefined ? params.TIP : config.TIP.default}%</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* PRICING SUMMARY */}
+              <div className="bg-white rounded-xl shadow-lg p-5">
+                <h2 className="text-xl font-bold text-amber-800 mb-4">סיכום תמחור</h2>
+
+                <div className="grid grid-cols-2 gap-4 mb-5">
+                  <div className="bg-green-50 rounded-lg p-3 border-2 border-green-200">
+                    <h3 className="font-bold text-green-800 mb-3 text-base">הכנסות</h3>
+                    <div className="space-y-1.5">
+                      {calc.income.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-xs gap-1">
+                          <span className="text-gray-700">{item.label}</span>
+                          <span className="text-green-700 font-semibold whitespace-nowrap">{fmt(item.amount)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t-2 border-green-300 pt-2 mt-2">
+                        <div className="flex justify-between font-bold text-sm">
+                          <span>סה"כ</span>
+                          <span className="text-green-700">{fmt(calc.income.reduce((s, i) => s + i.amount, 0))} ש"ח</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-red-50 rounded-lg p-3 border-2 border-red-200">
+                    <h3 className="font-bold text-red-800 mb-3 text-base">הוצאות</h3>
+                    <div className="space-y-1.5">
+                      {calc.outcome.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-xs gap-1">
+                          <span className="text-gray-700">{item.label}</span>
+                          <span className="text-red-700 font-semibold whitespace-nowrap" dir="ltr">-{fmt(Math.abs(item.amount))}</span>
+                        </div>
+                      ))}
+                      <div className="border-t-2 border-red-300 pt-2 mt-2">
+                        <div className="flex justify-between font-bold text-sm">
+                          <span>סה"כ</span>
+                          <span className="text-red-700" dir="ltr">-{fmt(Math.abs(calc.COG))} ש"ח</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Final Summary */}
+                <div className="bg-amber-50 rounded-xl p-5 border-2 border-amber-300 space-y-2.5">
+                  {calc.childrenDiscount < 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-semibold">הנחה לילדים ({params.CHD})</span>
+                      <span className="text-red-600 font-bold" dir="ltr">-{fmt(Math.abs(calc.childrenDiscount))} ש"ח</span>
+                    </div>
+                  )}
+                  {calc.percentageDiscount < 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-semibold">הנחה ({params.DSC}%)</span>
+                      <span className="text-red-600 font-bold" dir="ltr">-{fmt(Math.abs(calc.percentageDiscount))} ש"ח</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t-2 border-amber-400 pt-2">
+                    <span className="font-semibold">סה"כ לפני מע"מ</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.REV)} ש"ח</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">מע"מ (18%)</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.vat)} ש"ח</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">טיפ ({params.TIP}%)</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.tip)} ש"ח</span>
+                  </div>
+                  <div className="flex justify-between text-xl border-t-4 border-amber-500 pt-3 mt-2">
+                    <span className="font-bold">סה"כ לתשלום</span>
+                    <span className="text-green-600 font-bold">{fmt(calc.finalTotal)} ש"ח</span>
+                  </div>
+                </div>
+
+                {/* WhatsApp */}
+                <button onClick={handleCopyWhatsApp}
+                  className={`w-full mt-5 font-bold py-3.5 px-6 rounded-xl shadow-lg transition-all text-lg ${copied ? 'bg-green-600 text-white scale-95' : 'bg-green-500 hover:bg-green-600 text-white hover:shadow-xl'}`}>
+                  {copied ? '✅ הועתק! הדבק בווטסאפ' : '📱 העתק הצעת מחיר לווטסאפ'}
+                </button>
+
+                {/* Save / Send to Monday */}
+                <button onClick={handleSaveFile}
+                  className={`w-full mt-2 font-bold py-3 px-6 rounded-xl shadow-lg transition-all text-base ${
+                    mondayStatus === 'uploading' ? 'bg-blue-400 text-white cursor-wait opacity-70' :
+                    mondayStatus === 'success' ? 'bg-green-600 text-white scale-95' :
+                    mondayStatus === 'error' ? 'bg-red-500 text-white' :
+                    saved ? 'bg-amber-600 text-white scale-95' :
+                    'bg-amber-500 hover:bg-amber-600 text-white hover:shadow-xl'
+                  }`}>
+                  {mondayStatus === 'uploading' ? '⏳ שולח ל-Monday...' :
+                   mondayStatus === 'success' ? '✅ נשלח ל-Monday!' :
+                   mondayStatus === 'error' ? '❌ שגיאה בשליחה – נסה שוב' :
+                   saved ? '✅ הקובץ נשמר!' :
+                   mondayItemId ? '📤 שלח הצעת מחיר ל-Monday' : '🖼️ שמור הצעת מחיר כתמונה'}
+                </button>
+
+                {/* PDF */}
+                <button onClick={handleGeneratePDF} disabled={pdfLoading}
+                  className={`w-full mt-2 font-bold py-3 px-6 rounded-xl shadow-lg transition-all text-base ${pdfLoading ? 'bg-blue-400 text-white cursor-wait opacity-70' : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-xl'}`}>
+                  {pdfLoading ? '⏳ מכין קובץ...' : '📄 צור הצעת מחיר ב-PDF'}
+                </button>
+
+                <button onClick={() => setShowPreview(!showPreview)} className="w-full mt-2 text-sm text-amber-700 hover:text-amber-900 underline">
+                  {showPreview ? 'הסתר תצוגה מקדימה' : 'הצג תצוגה מקדימה של ההודעה'}
+                </button>
+
+                {showPreview && (
+                  <div className="mt-3 bg-green-50 border-2 border-green-200 rounded-xl p-4">
+                    <pre className="whitespace-pre-wrap text-gray-800 text-xs leading-relaxed" style={{ fontFamily: 'system-ui, sans-serif' }}>
+                      {generateWhatsAppMessage()}
+                    </pre>
+                  </div>
+                )}
+
+                <div className="mt-3 flex justify-between items-center text-sm text-gray-500 px-1">
+                  <span>רווח גולמי</span>
+                  <span className={`font-semibold ${calc.GDP >= 0 ? 'text-green-600' : 'text-red-600'}`} dir="ltr">
+                    {calc.GDP < 0 ? '-' : ''}{fmt(Math.abs(calc.GDP))} ש"ח
+                    <span className="mr-1 opacity-75">({calc.REV > 0 ? Math.round((calc.GDP / calc.REV) * 100) : 0}%)</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<HVLPricingApp />);
+  </script>
 </body>
 </html>
