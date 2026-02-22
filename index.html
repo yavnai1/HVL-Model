@@ -656,7 +656,7 @@
           const adults = params.ADT || 0;
           const children = params.CHD || 0;
           const totalGuests = adults + children;
-          const formatDate = (d) => d || '';
+          const formatDate = (d) => { if(!d) return ''; const p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; };
           const fmtNum = n => Math.abs(Math.round(n)).toLocaleString('he-IL');
           const loadImg = (src) => new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
           const drawHeb = (ctx,text,x,y) => {
@@ -866,8 +866,7 @@
                     </div>
                     <div>
                       <label className="block text-gray-600 text-xs font-semibold mb-1">תאריך האירוע</label>
-                      <input type="text" value={customer.date} onChange={e => setCustomer({...customer, date: e.target.value})}
-                        placeholder="dd/mm/yyyy" maxLength={10}
+                      <input type="date" value={customer.date} onChange={e => setCustomer({...customer, date: e.target.value})}
                         className="w-full p-2 border-2 border-blue-200 rounded-lg text-sm bg-white focus:border-blue-400 outline-none" dir="ltr" />
                     </div>
                   </div>
