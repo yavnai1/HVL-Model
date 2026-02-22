@@ -211,7 +211,7 @@
           outcome.push({ label: 'עלות הכשרת רב', amount: -config.OKSH });
         }
 
-        if (config.OCHEFB) {
+        if (config.OCHEFB && !(eventType === 'OFS' && params.FOD !== 'כן')) {
           outcome.push({ label: 'שף בסיס', amount: -config.OCHEFB });
           if (config.OCHEF1 && totalGuests > 35) outcome.push({ label: `שף תוספת`, amount: -(totalGuests - 35) * config.OCHEF1 });
           if (config.OCHEF2 && totalGuests > 10) outcome.push({ label: `שף תוספת`, amount: -(totalGuests - 10) * config.OCHEF2 });
