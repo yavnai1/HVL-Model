@@ -745,7 +745,7 @@
 
           // Summary - always 18% VAT
           const vat18 = Math.round(calc.REV * 0.18);
-          const tipAmt = Math.round(calc.REV * ((params.TIP||0)/100));
+          const tipAmt = Math.round((calc.REV + vat18) * ((params.TIP||0)/100));
           const sumTotal = Math.round(calc.REV + vat18 + tipAmt);
 
           ctx.font='32px sans-serif';
@@ -773,7 +773,8 @@
           ctx.clearRect(0,0,IW,IH); ctx.drawImage(img4,0,0,IW,IH);
           pdf.addImage(canvas.toDataURL('image/jpeg',0.92),'JPEG',0,0,PW,PH);
 
-          pdf.save('הצעת_מחיר_'+dd+mm2+yy2+'.pdf');
+          const clientName = customer.name ? '_'+customer.name.replace(/\s+/g,'_') : '';
+          pdf.save('הצעת_מחיר_'+yy2+mm2+dd+clientName+'.pdf');
 
         } catch(err){
           console.error('PDF error:',err);
