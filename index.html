@@ -7,6 +7,8 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;400&family=Heebo:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
@@ -52,7 +54,7 @@
           CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: ['לא', 'כן'], WIN: ['לא', 'כן'],
           WINP: null, KIT: ['לא', 'כן'],
           DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
-          IBASE: 5500, IMORE: 500, ICRK: 1000, IPRO: 75,
+          IBASE: 5500, IMORE: 200, ICRK: 1000, IPRO: 75,
           OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
           ICER: 350, OCER: 175, IWINP: null, OWINP: null,
           IKIT: 150, OKIT: 0,
@@ -99,7 +101,7 @@
           name: 'RNT - השכרת חלל', icon: '🏛️',
           ADT: { min: 15, max: 80, default: 15 },
           CHD: { min: 0, max: 20, default: 0 },
-          FOD: null, KSH: null, WTR: [0, 1, 2], PRO: [0, 1, 2],
+          FOD: null, KSH: null, WTR: [0, 1, 2], PRO: null,
           CRK: null, CER: null, FLW: ['לא', 'כן'], WIN: ['לא', 'כן'],
           WINP: null, KIT: ['לא', 'כן'],
           DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
@@ -659,6 +661,18 @@
           const formatDate = (d) => { if(!d) return ''; const p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; };
           const fmtNum = n => Math.abs(Math.round(n)).toLocaleString('he-IL');
           const loadImg = (src) => new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=src; });
+
+          // Load Hebrew fonts for canvas
+          const loadFonts = async () => {
+            try {
+              const f1 = new FontFace('FrankRuhl', 'url(https://fonts.gstatic.com/s/frankruhllibre/v21/j8_y6-zQ3rXpceZj9cqnVhV5bqZRFz3LMKIm6Q.woff2)', {weight:'300'});
+              const f2 = new FontFace('FrankRuhl', 'url(https://fonts.gstatic.com/s/frankruhllibre/v21/j8_36-zQ3rXpceZj9cqnVhV5bqZRFz3MKEiG.woff2)', {weight:'400'});
+              await Promise.allSettled([f1.load(), f2.load()]);
+              document.fonts.add(f1); document.fonts.add(f2);
+            } catch(e) { console.log('Font load failed, using fallback'); }
+          };
+          await loadFonts();
+          const HEB_FONT = 'FrankRuhl, "Noto Serif Hebrew", serif';
           const drawHeb = (ctx,text,x,y) => {
             ctx.save(); ctx.direction='rtl'; ctx.textAlign='right';
             ctx.fillText(text,x,y); ctx.restore();
@@ -687,9 +701,9 @@
           // Blue area right edge=1380, available rows ~970-1960
           const rx2=1365, lh2=64;
           let ty2=990;
-          ctx.font='bold 48px sans-serif'; ctx.fillStyle='#C8A84E';
+          ctx.font='bold 48px '+HEB_FONT; ctx.fillStyle='#C8A84E';
           drawHeb(ctx,'סוג אירוע: '+eventNames[eventType], rx2, ty2); ty2+=lh2;
-          ctx.font='42px sans-serif'; ctx.fillStyle='#ffffff';
+          ctx.font='42px '+HEB_FONT; ctx.fillStyle='#ffffff';
           if(customer.name){drawHeb(ctx,'שם: '+customer.name,rx2,ty2);ty2+=lh2;}
           if(customer.date){drawHeb(ctx,'תאריך: '+formatDate(customer.date),rx2,ty2);ty2+=lh2;}
           drawHeb(ctx,'משתתפים: '+totalGuests+(children>0?' ('+adults+' מבוגרים, '+children+' ילדים)':''),rx2,ty2);ty2+=lh2;
@@ -716,10 +730,10 @@
           const prx=1280, plx=140, lh3=54;
           let py=120;
 
-          ctx.font='bold 60px sans-serif'; ctx.fillStyle='#C8A84E';
+          ctx.font='bold 60px '+HEB_FONT; ctx.fillStyle='#C8A84E';
           drawHeb(ctx,'פירוט הצעת מחיר',prx,py); py+=lh3*1.4;
 
-          ctx.font='34px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.75)';
+          ctx.font='34px '+HEB_FONT; ctx.fillStyle='rgba(255,255,255,0.75)';
           ctx.save();ctx.direction='ltr';ctx.textAlign='right';
           ctx.fillText('מספר הצעה: '+qNum,prx,py);ctx.restore();py+=lh3*0.85;
           if(customer.name){ctx.fillStyle='rgba(255,255,255,0.75)';drawHeb(ctx,'לקוח: '+customer.name,prx,py);py+=lh3*0.85;}
@@ -730,7 +744,7 @@
           ctx.beginPath();ctx.moveTo(plx,py);ctx.lineTo(prx,py);ctx.stroke();py+=lh3*0.85;
 
           // Income rows only (no expenses/outcome)
-          ctx.font='32px sans-serif';
+          ctx.font='32px '+HEB_FONT;
           for(const item of calc.income){
             if(py>1300)break;
             ctx.fillStyle='#ffffff'; drawHeb(ctx,item.label,prx,py);
@@ -748,7 +762,7 @@
           const tipAmt = Math.round((calc.REV + vat18) * ((params.TIP||0)/100));
           const sumTotal = Math.round(calc.REV + vat18 + tipAmt);
 
-          ctx.font='32px sans-serif';
+          ctx.font='32px '+HEB_FONT;
           const summaryRows=[
             {label:'סכום לפני מע"מ',val:fmtNum(calc.REV)},
             {label:'מע"מ (18%)',val:fmtNum(vat18)},
@@ -762,7 +776,7 @@
             py+=lh3;
           }
           py+=lh3*0.4;
-          ctx.font='bold 50px sans-serif';ctx.fillStyle='#C8A84E';
+          ctx.font='bold 50px '+HEB_FONT;ctx.fillStyle='#C8A84E';
           drawHeb(ctx,'סה"כ לתשלום',prx,py);
           ctx.save();ctx.direction='ltr';ctx.textAlign='left';
           ctx.fillText(fmtNum(sumTotal)+' \u20aa',plx,py);ctx.restore();
