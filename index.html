@@ -49,7 +49,7 @@
         },
         OFS: {
           name: 'OFS - אופסייט', icon: '🏕️',
-          ADT: { min: 10, max: 70, default: 10 }, CHD: null,
+          ADT: { min: 15, max: 70, default: 15 }, CHD: null,
           FOD: ['לא', 'כן'], KSH: ['לא', 'כן'], WTR: [0, 1, 2], PRO: [0, 1, 2],
           CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: ['לא', 'כן'], WIN: ['לא', 'כן'],
           WINP: null, KIT: ['לא', 'כן'],
@@ -65,13 +65,13 @@
         },
         CKT: {
           name: 'CKT - קוקטלים', icon: '🍸',
-          ADT: { min: 15, max: 80, default: 15 },
+          ADT: { min: 20, max: 80, default: 20 },
           CHD: { min: 0, max: 20, default: 0 },
           FOD: 'כלול', KSH: ['לא', 'כן'], WTR: 'calc', PRO: [0, 1, 2],
           CRK: ['לא', 'כן'], CER: ['לא', 'כן'], FLW: 'כלול', WIN: 'כלול',
           WINP: ['לא', 'כן'], KIT: null,
           DSC: { min: 0, max: 15, default: 0 }, TIP: { min: 0, max: 15, default: 15 },
-          IBASE: 7050, IMORE: 470, ICRK: 1000, IPRO: 75,
+          IBASE: 9400, IMORE: 470, ICRK: 1000, IPRO: 75,
           OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
           ICER: 350, OCER: 175, IWINP: 60, OWINP: 10,
           IKIT: null, OKIT: null,
@@ -166,14 +166,15 @@
         const children = params.CHD || 0;
         let income = [], outcome = [];
 
-        income.push({ label: 'חבילת בסיס (עד 15 אנשים)', amount: config.IBASE });
+        const baseGuests = eventType === 'CKT' ? 20 : 15;
+        income.push({ label: `חבילת בסיס (עד ${baseGuests} אנשים)`, amount: config.IBASE });
 
         if (eventType === 'RNT' && config.IMORE_per10) {
           const extra = Math.max(0, totalGuests - 15);
           const groups = Math.ceil(extra / 10);
           if (groups > 0) income.push({ label: `תוספת אורחים (${groups * 10} אנשים)`, amount: groups * config.IMORE_per10 });
-        } else if (config.IMORE && totalGuests > 15) {
-          const extra = totalGuests - 15;
+        } else if (config.IMORE && totalGuests > baseGuests) {
+          const extra = totalGuests - baseGuests;
           income.push({ label: `תוספת אורחים (${extra} × ${config.IMORE} ש"ח)`, amount: extra * config.IMORE });
         }
 
