@@ -92,7 +92,7 @@
           OPRO1_15: 30, OPRO1_over: 15, OPRO2: 20,
           ICER: 350, OCER: 175, IWINP: 60, OWINP: 10,
           IKIT: null, OKIT: null,
-          IFLW: 1200, OFLW: 800, IWIN: 'כלול', OWIN: 20,
+          IFLW: 'כלול', OFLW: 800, IWIN: 'כלול', OWIN: 20,
           IKSH: 1500, OKSH: 1000,
           OCHEFB: 1400, OCHEF1: 40, OCHEF2: null,
           OFOD: 70, OCLEAN: 500, OEVM: 700, OWTR: 400, OOVH: 750
@@ -270,39 +270,18 @@
         const quoteNum = `${dd}${mm}${yy}-${hh}${min}`;
 
         let m = '';
-        m += `${R}${boldHebrew('הצעת מחיר חובות הלבבות')} 🌿\n`;
+        m += `${R}${boldHebrew('הצעת מחיר חובות הלבבות')}\n`;
         m += `${R}הצעה מספר: ${R}${quoteNum}\n`;
         m += `─────────────────────\n\n`;
-        m += `${R}${boldHebrew('פרטי האירוע')} 📋\n`;
+        m += `${R}${boldHebrew('פרטי האירוע')}\n`;
         m += `${R}סוג: ${eventNames[eventType]}\n`;
         m += `${R}מבוגרים: ${R}${adults}`;
         if (children > 0) m += ` | ילדים: ${R}${children}`;
         m += `\n${R}סה"כ משתתפים: ${R}${totalGuests}\n`;
 
-        const included = [];
-        if (config.FOD === 'כלול') included.push('אוכל 🍽️');
-        if (config.FLW === 'כלול') included.push('פרחים 💐');
-        if (config.WIN === 'כלול') included.push('יין 🍷');
-        if (included.length > 0) m += `\n${R}${boldHebrew('כלול בחבילה:')} ${included.join(', ')}\n`;
-
-        const extras = [];
-        if (params.KSH === 'כן') extras.push('כשרות רב');
-        if (params.CRK === 'כן') extras.push('דמי חליצה');
-        if (params.CER === 'כן') extras.push('סדנת קרמיקה 🎨');
-        if (config.FLW !== 'כלול' && params.FLW === 'כן') extras.push('פרחים 💐');
-        if (config.WIN !== 'כלול' && params.WIN === 'כן') extras.push('יין 🍷');
-        if (params.WINP === 'כן') extras.push('יין פרימיום 🥂');
-        if (params.KIT === 'כן') extras.push('שימוש במטבח');
-        if (config.FOD !== 'כלול' && params.FOD === 'כן') extras.push('אוכל 🍽️');
-        if ((params.PRO || 0) > 0) extras.push(`${R}${params.PRO} מנות חלבון לאדם 🥩`);
-        if (extras.length > 0) {
-          m += `\n${R}${boldHebrew('תוספות:')} ✅\n`;
-          extras.forEach(e => { m += `${R}• ${e}\n`; });
-        }
-
         if (customer.name || customer.phone || customer.date) {
           m += `\n─────────────────────\n`;
-          m += `${R}${boldHebrew('פרטי לקוח')} 👤\n`;
+          m += `${R}${boldHebrew('פרטי לקוח')}\n`;
           if (customer.name) m += `${R}שם: ${customer.name}\n`;
           if (customer.phone) m += `${R}טלפון: ${customer.phone}\n`;
           if (customer.email) m += `${R}אימייל: ${customer.email}\n`;
@@ -310,17 +289,17 @@
           if (customer.notes) m += `${R}הערות: ${customer.notes}\n`;
         }
         m += `\n─────────────────────\n`;
-        m += `${R}${boldHebrew('פירוט עלויות')} 💰\n\n`;
+        m += `${R}${boldHebrew('פירוט עלויות')}\n\n`;
         calc.income.forEach(item => { m += `${R}${item.label}: ${fmtR(item.amount)} ש"ח\n`; });
         if (calc.childrenDiscount < 0) m += `${R}הנחה לילדים (${R}${children} x ${R}100): ${fmtR(calc.childrenDiscount)} ש"ח\n`;
         if (calc.percentageDiscount < 0) m += `${R}הנחה ${R}${params.DSC}%: ${fmtR(calc.percentageDiscount)} ש"ח\n`;
 
         m += `\n─────────────────────\n`;
         m += `${R}סכום לפני מע"מ: ${fmtR(calc.REV)} ש"ח\n`;
-        m += `${R}מע"מ ${R}18%: ${fmtR(calc.vat)} ש"ח\n`;
+        m += `${R}מע"מ 18%: ${fmtR(calc.vat)} ש"ח\n`;
         if ((params.TIP || 0) > 0) m += `${R}טיפ ${R}${params.TIP}%: ${fmtR(calc.tip)} ש"ח\n`;
-        m += `\n${R}${boldHebrew('סה"כ לתשלום:')} ${fmtR(calc.finalTotal)} ש"ח ✨\n\n`;
-        m += `${R}נשמח לארח אתכם! 🤍\n${R}חובות הלבבות 🌿`;
+        m += `\n${R}${boldHebrew('סה"כ לתשלום:')} ${fmtR(calc.finalTotal)} ש"ח\n\n`;
+        m += `${R}נשמח לארח אתכם!\n${R}חובות הלבבות`;
         return m;
       };
 
